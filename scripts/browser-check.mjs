@@ -61,7 +61,7 @@ try {
  await page.getByRole('heading',{name:'Migration photo service',exact:true}).waitFor();
  await page.getByRole('button',{name:'Your feed',exact:true}).click();
  await page.getByRole('textbox',{name:'Post text'}).fill('Unsent draft');
- await page.getByRole('textbox',{name:'Search current page'}).fill('Browser test');
+ await page.getByRole('searchbox',{name:'Search current page'}).fill('Browser test');
  assert.equal(await page.getByRole('textbox',{name:'Post text'}).inputValue(),'Unsent draft');
  await page.getByRole('button',{name:'Comments · 0',exact:true}).click();
  await page.getByLabel('Comment',{exact:true}).fill('Persistent comment <b>literal</b>');
@@ -70,7 +70,7 @@ try {
  await page.keyboard.press('Escape');
  assert.equal(await page.getByRole('dialog').count(),0);
  await page.reload();
- await page.getByRole('textbox',{name:'Search current page'}).fill('Browser test');
+ await page.getByRole('searchbox',{name:'Search current page'}).fill('Browser test');
  await page.getByRole('button',{name:'Comments · 1',exact:true}).click();
  await page.getByText('Persistent comment <b>literal</b>',{exact:true}).waitFor();
  await page.keyboard.press('Escape');
