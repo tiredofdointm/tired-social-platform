@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createServer} from '../server.mjs';
-import {rankPosts,toggleItem,calculateQuote,validateEvent,makeSeed} from '../public/model.mjs';
+import {rankPosts,toggleItem,calculateQuote,validateEvent,makeSeed} from '../dist/model.js';
 test('quote uses integer cents and rejects invalid durations',()=>{
  assert.deepEqual(calculateQuote(150,2),{subtotal:30000,fee:3000,total:33000});
  assert.deepEqual(calculateQuote(19.99,3),{subtotal:5997,fee:600,total:6597});
@@ -33,7 +33,7 @@ test('HTTP serves app and health, blocks private paths and mutations',async t=>{
  const server=createServer();await new Promise(r=>server.listen(0,'127.0.0.1',r));
  t.after(()=>new Promise(r=>server.close(r)));
  const origin='http://127.0.0.1:'+server.address().port;
- const page=await fetch(origin);assert.equal(page.status,200);assert.match(await page.text(),/app.mjs/);
+ const page=await fetch(origin);assert.equal(page.status,200);assert.match(await page.text(),/app\.js/);
  assert.match(page.headers.get('content-security-policy'),/default-src 'self'/);
  const health=await fetch(origin+'/healthz');assert.equal((await health.json()).mode,'local-demo');
  for(const path of ['/server.mjs','/.env','/package.json','/missing'])assert.equal((await fetch(origin+path)).status,404);

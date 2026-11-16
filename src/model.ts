@@ -1,18 +1,19 @@
+import type {State, Post, FeedMode, EventListing, Quote} from './types';
 export const STORAGE_KEY = 'tired-social-v1';
-export function rankPosts(posts, following, mode='for-you') {
+export function rankPosts(posts: Post[], following: string[], mode: FeedMode='for-you'): Post[] {
  const list = mode === 'following' ? posts.filter(p => following.includes(p.author) || p.author === 'You') : [...posts];
  return list.sort((a,b) => mode === 'latest' || mode === 'following'
   ? b.createdAt-a.createdAt
   : (score(b,following)-score(a,following)));
 }
-function score(p, following) {return p.createdAt / 3600000 + Math.min(p.likes,50)*0.2 + (following.includes(p.author)?8:0);}
-export function toggleItem(items, id) {return items.includes(id) ? items.filter(x=>x!==id) : [...items,id];}
-export function calculateQuote(rate,hours,feePercent=10) {
+function score(p: Post, following: string[]) {return p.createdAt / 3600000 + Math.min(p.likes,50)*0.2 + (following.includes(p.author)?8:0);}
+export function toggleItem(items: string[], id: string): string[] {return items.includes(id) ? items.filter(x=>x!==id) : [...items,id];}
+export function calculateQuote(rate:number,hours:number,feePercent=10): Quote {
  if (!Number.isFinite(rate) || rate < 0 || !Number.isInteger(hours) || hours < 1 || hours > 12 || !Number.isFinite(feePercent) || feePercent < 0 || feePercent > 100) throw new Error('Invalid quote');
  const subtotal=Math.round(rate*100)*hours, fee=Math.round(subtotal*feePercent/100);
  return {subtotal,fee,total:subtotal+fee};
 }
-export function validateEvent(e) {
+export function validateEvent(e: Pick<EventListing,'title'|'location'|'date'|'price'|'capacity'>): string | null {
  if (!e.title?.trim() || e.title.trim().length>100) return 'Enter an event name of 1–100 characters.';
  if (!e.location?.trim()) return 'Enter a location.';
  if (!e.date || !Number.isFinite(Date.parse(e.date))) return 'Choose a valid date.';
@@ -20,8 +21,8 @@ export function validateEvent(e) {
  if (!Number.isInteger(e.capacity) || e.capacity < 1 || e.capacity > 100000) return 'Capacity must be a whole number between 1 and 100,000.';
  return null;
 }
-export function makeSeed(now=Date.now()) {
- const day=n=>new Date(now+n*86400000).toISOString().slice(0,10);
+export function makeSeed(now=Date.now()): State {
+ const day=(n:number)=>new Date(now+n*86400000).toISOString().slice(0,10);
  return {
  version:1, prefs:{theme:'dark',accent:'lime',density:'comfortable',motion:true,review:false},
  profile:{name:'You',bio:'Here for good people and unforgettable nights.'},

@@ -2,7 +2,7 @@
 Independent social events and talent marketplace. **No Laravel.**
 
 ## Current implementation
-A runnable Node.js application with a responsive, customizable interface:
+A React/TypeScript interface served by Node.js with a responsive, customizable interface:
 - Discover/filter events; save events and RSVP locally.
 - Write posts, like, comment and follow; Following/Latest/For you feeds.
 - Create friend-plan drafts.
@@ -17,15 +17,17 @@ Production backend integrations are tracked in docs/BACKLOG.md.
 ## Run
 Requires Node.js 22+.
 ```sh
+npm install
+npm run build
 npm start
 ```
-Open http://localhost:8080. No packages are needed for the runtime or unit tests.
+Open http://localhost:8080. The built HTTP runtime uses Node.js built-ins; building requires the pinned npm dependencies.
 
 ## Verify
 ```sh
+npm install
 npm run check
 npm test
-npm install
 npx playwright install --with-deps chromium
 npm run test:browser
 ```
@@ -38,6 +40,5 @@ Screenshots are attached to the workflow run.
 - [Session checkpoint](docs/SESSION.md)
 - [Google Cloud deployment](docs/DEPLOYMENT.md)
 
-The initial UI uses native browser modules to avoid blocking on the unavailable local build runtime.
-React/TypeScript migration is scheduled before shared-account backend integration.
+The UI uses strict TypeScript and reusable React components. Existing browser-local data uses the same storage key; shared-account backend integration is the next foundation task.
 Dockerfile and cloudbuild.yaml are supplied; **a Google Cloud deployment is not yet verified**.

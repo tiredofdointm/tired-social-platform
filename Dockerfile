@@ -1,8 +1,16 @@
+FROM node:22-alpine AS build
+WORKDIR /app
+COPY package.json ./
+RUN npm install --no-audit --no-fund
+COPY src ./src
+COPY scripts/build.mjs ./scripts/build.mjs
+COPY public ./public
+RUN npm run build
 FROM node:22-alpine
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --chown=node:node package.json server.mjs ./
-COPY --chown=node:node public ./public
+COPY --from=build --chown=node:node /app/dist ./dist
 USER node
 ENV PORT=8080
 EXPOSE 8080

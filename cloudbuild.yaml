@@ -1,6 +1,9 @@
 steps:
   - name: 'node:22-alpine'
     entrypoint: npm
+    args: ['install', '--no-audit', '--no-fund']
+  - name: 'node:22-alpine'
+    entrypoint: npm
     args: ['run', 'check']
   - name: 'node:22-alpine'
     entrypoint: npm

@@ -3,8 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 const assets = new Map([
  ['/', ['index.html', 'text/html; charset=utf-8']],
- ['/app.mjs', ['app.mjs', 'text/javascript; charset=utf-8']],
- ['/model.mjs', ['model.mjs', 'text/javascript; charset=utf-8']],
+ ['/app.js', ['app.js', 'text/javascript; charset=utf-8']],
  ['/styles.css', ['styles.css', 'text/css; charset=utf-8']]
 ]);
 export function createServer() {
@@ -25,7 +24,7 @@ export function createServer() {
   const asset = assets.get(path);
   if (!asset) {res.writeHead(404); return res.end('Not found');}
   try {
-   const data = await readFile(new URL('./public/' + asset[0], import.meta.url));
+   const data = await readFile(new URL('./dist/' + asset[0], import.meta.url));
    res.writeHead(200, {'Content-Type':asset[1], 'Cache-Control':'no-cache'});
    res.end(req.method === 'HEAD' ? undefined : data);
   } catch {res.writeHead(500); res.end('Unable to load application');}
