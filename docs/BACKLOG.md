@@ -1,21 +1,29 @@
-# Backlog
-Status applies only to this repository.
+# Progress and next tasks
+The authoritative backlog is [project/progress.json](../project/progress.json).
+Do not maintain conflicting task states in this document.
 
-| ID | Priority | Task | Status / acceptance |
-|---|---|---|---|
-| F01 | P0 | Commit independent Node runtime and plan | Implemented; verify repository commit |
-| F02 | P0 | Automated unit, HTTP, browser and container checks | Verification; CI must pass |
-| F03 | P0 | Google Cloud staging | Blocked on deployment path; verify Cloud Run URL and revision |
-| U01 | P1 | Responsive navigation and shared UI | Implemented; browser verification required |
-| U02 | P1 | Theme, accent, density, profile settings | Implemented locally; cross-device sync pending |
-| U03 | P1 | Posts, likes, comments, follows | Local demo implemented; shared backend pending |
-| E01 | P1 | Event discovery, search, RSVP, create/review | Local demo implemented; shared backend pending |
-| P01 | P1 | Friend plan drafts | Local demo implemented; invitation/group privacy pending |
-| T01 | P1 | Provider listing and booking estimates | Local demo implemented; availability/payment pending |
-| A01 | P1 | React/TypeScript migration and Google auth | Ready after UI gate |
-| D01 | P1 | Database schema and server permissions | Ready for design |
-| C01 | P1 | Inventory reservations and Stripe test checkout | Depends on A01/D01 |
-| C02 | P1 | Stripe Connect onboarding/fees/payouts | Depends on A01/D01 |
-| O01 | P2 | Organizer check-in/refunds/analytics | Depends on C01 |
-| S01 | P2 | Ranking, notifications, block/report flows | Depends on A01/D01 |
-| R01 | P1 before launch | Recovery, monitoring, security and accessibility | Depends on shared backend |
+[Progress workflow](https://github.com/tiredofdointm/tired-social-platform/actions/workflows/progress.yml)
+publishes a summary and downloadable report after progress/doc changes or manual dispatch.
+It validates dependencies, task states, evidence fields, retry gates and a one-task work-in-progress limit.
+
+## Current map
+- Complete: independent source/runtime; automated platform checks; local UI milestone;
+  master plan/backend contract; PostgreSQL social schema and database tests.
+- In verification: progress tracking workflow.
+- Ready: rendered UI/accessibility review, React/TypeScript migration, server data-access layer.
+- Blocked: cloud project/deployment access, pending exact project ID and billing evidence.
+- Not implemented: live identity, shared social APIs, production events/plans,
+  ticket sales, provider payouts and launch.
+
+This is milestone tracking, not a claim that a percentage of the full product is done.
+Local demo functionality and tested schema are not a deployed multiuser platform.
+
+## Anti-loop rules
+1. Read SESSION.md and progress.json before touching code.
+2. Follow dependencies; choose the designated next task or document why it changes.
+3. One primary implementation task at a time.
+4. A failed approach gets a blocker record with a retry condition. No blind retry next session.
+5. Switch to a ready independent task when an external prerequisite blocks the primary task.
+6. Done requires reviewed evidence and acceptance criteria, not just code or a tool request.
+7. Keep deployment IDs, commit SHAs, failures and next actions in SESSION.md.
+8. CI publishes recommendations; it does not autonomously execute backlog tasks or verify external evidence links.

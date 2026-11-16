@@ -1,0 +1,33 @@
+name: Project progress and next tasks
+on:
+  push:
+    paths:
+      - 'project/**'
+      - 'docs/**'
+      - 'scripts/progress.mjs'
+      - '.github/workflows/progress.yml'
+  pull_request:
+    paths:
+      - 'project/**'
+      - 'docs/**'
+      - 'scripts/progress.mjs'
+      - '.github/workflows/progress.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  progress:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate progress and publish next tasks
+        run: node scripts/progress.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: project-progress
+          path: artifacts/progress.md

@@ -1,0 +1,291 @@
+{
+  "version": 1,
+  "updated": "2026-11-16",
+  "objective": "Independent Google Cloud social/events/talent platform; no Laravel; customizable UI and verified production journeys.",
+  "currentSession": {
+    "primaryTask": "W01",
+    "nextTask": "U03",
+    "reason": "Finish workflow tracking, then migrate the tested UI without waiting on the cloud console."
+  },
+  "workInProgressLimit": 1,
+  "tasks": [
+    {
+      "id": "F01",
+      "title": "Repository and runnable foundation",
+      "status": "done",
+      "priority": 0,
+      "dependsOn": [],
+      "acceptance": "Source committed in the independent repository.",
+      "evidence": [
+        "https://github.com/tiredofdointm/tired-social-platform/commit/65daada588a13851313554f77428913b07bce149"
+      ],
+      "workstream": "F"
+    },
+    {
+      "id": "F02",
+      "title": "Runtime, browser journeys and container verification",
+      "status": "done",
+      "priority": 0,
+      "dependsOn": [
+        "F01"
+      ],
+      "acceptance": "Syntax, unit/HTTP, browser and Docker checks pass.",
+      "evidence": [
+        "https://github.com/tiredofdointm/tired-social-platform/actions/runs/43973459238"
+      ],
+      "workstream": "F"
+    },
+    {
+      "id": "U01",
+      "title": "Interactive UI and local customization milestone",
+      "status": "done",
+      "priority": 1,
+      "dependsOn": [
+        "F02"
+      ],
+      "acceptance": "Local demo flows and preferences pass automated journeys; this does not imply production integrations.",
+      "evidence": [
+        "https://github.com/tiredofdointm/tired-social-platform/actions/runs/43973459238"
+      ],
+      "workstream": "U"
+    },
+    {
+      "id": "P01",
+      "title": "Master plan and backend contracts",
+      "status": "done",
+      "priority": 1,
+      "dependsOn": [
+        "F01"
+      ],
+      "acceptance": "Phases, data ownership, API contracts and permission rules are committed.",
+      "evidence": [
+        "https://github.com/tiredofdointm/tired-social-platform/blob/main/docs/PLAN.md",
+        "https://github.com/tiredofdointm/tired-social-platform/blob/main/docs/BACKEND-CONTRACT.md"
+      ],
+      "workstream": "P"
+    },
+    {
+      "id": "D01",
+      "title": "PostgreSQL identity/social schema",
+      "status": "done",
+      "priority": 1,
+      "dependsOn": [
+        "P01"
+      ],
+      "acceptance": "Versioned migration applies successfully in disposable PostgreSQL.",
+      "evidence": [
+        "https://github.com/tiredofdointm/tired-social-platform/actions/runs/43973458950"
+      ],
+      "workstream": "D"
+    },
+    {
+      "id": "D02",
+      "title": "Database constraint and visibility tests",
+      "status": "done",
+      "priority": 1,
+      "dependsOn": [
+        "D01"
+      ],
+      "acceptance": "Tests cover private/follower visibility, blocks, suspension, deletion and uniqueness.",
+      "evidence": [
+        "https://github.com/tiredofdointm/tired-social-platform/actions/runs/43973458950"
+      ],
+      "workstream": "D"
+    },
+    {
+      "id": "W01",
+      "title": "Progress queue and anti-loop workflow",
+      "status": "in_progress",
+      "priority": 0,
+      "dependsOn": [
+        "P01"
+      ],
+      "acceptance": "Progress workflow validates task graph and publishes ready/blocker summaries.",
+      "evidence": [],
+      "workstream": "W"
+    },
+    {
+      "id": "U02",
+      "title": "Inspect desktop/mobile screenshots and accessibility",
+      "status": "ready",
+      "priority": 1,
+      "dependsOn": [
+        "U01"
+      ],
+      "acceptance": "Rendered screens inspected; keyboard, focus, contrast and layout findings fixed or documented.",
+      "evidence": [],
+      "workstream": "U"
+    },
+    {
+      "id": "U03",
+      "title": "Migrate tested UI to React and TypeScript",
+      "status": "ready",
+      "priority": 1,
+      "dependsOn": [
+        "U01"
+      ],
+      "acceptance": "Preserve existing UI/journeys; typecheck, browser checks and container build pass.",
+      "evidence": [],
+      "workstream": "U"
+    },
+    {
+      "id": "D03",
+      "title": "Server data access and migration runner",
+      "status": "ready",
+      "priority": 1,
+      "dependsOn": [
+        "D02"
+      ],
+      "acceptance": "Parameterized database access, migration version checks and integration tests pass; no demo data silently imported.",
+      "evidence": [],
+      "workstream": "D"
+    },
+    {
+      "id": "C01",
+      "title": "Confirm dedicated cloud project and deployment access",
+      "status": "blocked",
+      "priority": 0,
+      "dependsOn": [
+        "F02"
+      ],
+      "acceptance": "Exact project ID and billing linkage are observed; duplicate project creation is ruled out.",
+      "evidence": [],
+      "workstream": "C",
+      "blocker": {
+        "cause": "Cloud Console automation reached new-project creation but returned no confirmed project ID; follow-up task failed before starting.",
+        "retryCondition": "A working cloud-management route is verified OR the user supplies a confirmed project ID/billing choice. First perform read-only reconciliation; never blindly create again.",
+        "nextAction": "Verify project existence in resource manager before any further create/deploy operation.",
+        "attempts": [
+          "Cloud Shell terminal input failed; no files executed.",
+          "Cloud Shell editor save/input failed; no files saved.",
+          "Repository source creation succeeded via GitHub API; do not retry browser editing.",
+          "Cloud Run setup run 3e1223a5-26ea-45b1-aaa1-33bd3e8c95ab ended without project confirmation."
+        ]
+      }
+    },
+    {
+      "id": "C02",
+      "title": "Authenticated Cloud Run staging",
+      "status": "backlog",
+      "priority": 0,
+      "dependsOn": [
+        "C01"
+      ],
+      "acceptance": "Service ready, authenticated URL and revision match verified commit; min0/max2.",
+      "evidence": [],
+      "workstream": "C"
+    },
+    {
+      "id": "A01",
+      "title": "Google identity and secure sessions",
+      "status": "backlog",
+      "priority": 1,
+      "dependsOn": [
+        "D03",
+        "U03"
+      ],
+      "acceptance": "OAuth/session validation and two-account authorization tests pass; logout revokes access.",
+      "evidence": [],
+      "workstream": "A"
+    },
+    {
+      "id": "S01",
+      "title": "First shared social journey",
+      "status": "backlog",
+      "priority": 1,
+      "dependsOn": [
+        "A01"
+      ],
+      "acceptance": "Two accounts persist profiles/posts/follows/comments; unauthorized changes and private access rejected.",
+      "evidence": [],
+      "workstream": "S"
+    },
+    {
+      "id": "E01",
+      "title": "Shared events and private friend plans",
+      "status": "backlog",
+      "priority": 1,
+      "dependsOn": [
+        "S01"
+      ],
+      "acceptance": "Create/discover/RSVP and member-only plans persist with server-enforced permissions.",
+      "evidence": [],
+      "workstream": "E"
+    },
+    {
+      "id": "E02",
+      "title": "Configurable publishing and review",
+      "status": "backlog",
+      "priority": 1,
+      "dependsOn": [
+        "E01"
+      ],
+      "acceptance": "Automatic default and manual review work for events/services; only authorized admin changes policy.",
+      "evidence": [],
+      "workstream": "E"
+    },
+    {
+      "id": "T01",
+      "title": "Inventory, ticket checkout and webhook reconciliation",
+      "status": "backlog",
+      "priority": 1,
+      "dependsOn": [
+        "E02"
+      ],
+      "acceptance": "Test checkout issues tickets once; concurrent reservations do not oversell; refunds reconcile.",
+      "evidence": [],
+      "workstream": "T"
+    },
+    {
+      "id": "T02",
+      "title": "Organizer ticket operations",
+      "status": "backlog",
+      "priority": 1,
+      "dependsOn": [
+        "T01"
+      ],
+      "acceptance": "Guest list, duplicate-scan prevention, refunds and real sales metrics pass end-to-end tests.",
+      "evidence": [],
+      "workstream": "T"
+    },
+    {
+      "id": "M01",
+      "title": "Provider profiles, services and booking availability",
+      "status": "backlog",
+      "priority": 1,
+      "dependsOn": [
+        "E02"
+      ],
+      "acceptance": "Provider/customer permissions and conflicting booking prevention pass.",
+      "evidence": [],
+      "workstream": "M"
+    },
+    {
+      "id": "M02",
+      "title": "Connect onboarding, platform fees and payouts",
+      "status": "backlog",
+      "priority": 1,
+      "dependsOn": [
+        "M01"
+      ],
+      "acceptance": "Provider test onboarding and financial reconciliation pass; configured fee policy is shown before purchase.",
+      "evidence": [],
+      "workstream": "M"
+    },
+    {
+      "id": "R01",
+      "title": "Production readiness and domain cutover",
+      "status": "backlog",
+      "priority": 0,
+      "dependsOn": [
+        "C02",
+        "T02",
+        "M02",
+        "U02"
+      ],
+      "acceptance": "Recovery, monitoring, security, accessibility and rollback verified before domain launch.",
+      "evidence": [],
+      "workstream": "R"
+    }
+  ]
+}
