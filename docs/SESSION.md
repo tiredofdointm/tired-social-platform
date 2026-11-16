@@ -2,52 +2,51 @@
 Date: 2026-11-16
 
 ## Current outcome
-Source creation is unblocked through the direct GitHub API.
-The first interactive UI foundation is committed and verified.
+Independent source creation, interactive UI foundation, database foundation and progress workflow are committed.
+Authoritative task states: project/progress.json. Do not infer product completion from prototype milestones.
 
-## Source evidence
-Initial application commit: 65daada588a13851313554f77428913b07bce149.
-Runner compatibility fix: 82f12684f32485cf8166478869b6b6f6a59eaf2c.
-Verification: https://github.com/tiredofdointm/tired-social-platform/actions/runs/43970136330
+## Reviewed evidence
+- Initial platform: 65daada588a13851313554f77428913b07bce149.
+- Supported CI runner fix: 82f12684f32485cf8166478869b6b6f6a59eaf2c.
+- Database foundation: d57618655c6f80075090b9c995a87a513281e34f.
+- Platform verification: https://github.com/tiredofdointm/tired-social-platform/actions/runs/43973459238
+  Syntax, 6 unit/HTTP tests, Chromium journeys and Docker build all passed.
+- Database verification: https://github.com/tiredofdointm/tired-social-platform/actions/runs/43973458950
+  PostgreSQL 16 migration and data/visibility constraints passed.
+- Progress workflow: https://github.com/tiredofdointm/tired-social-platform/actions/runs/43975153871
+  Dependency validation and next-task report passed.
 
-## Implemented
-Node HTTP server and responsive browser UI.
-Local posts, likes, comments, follows and selectable feed ordering.
-Event search/filtering, saved events, RSVP, creation and optional review.
-Friend-plan drafts, talent listings and booking estimates.
-Theme, accent, density, motion and profile preferences.
-Local data persistence/export/reset.
-Master plan, backlog, development instructions, Dockerfile and Google Cloud build configuration.
+## Implemented versus live
+UI: responsive local posts, likes/comments/follows, feeds, events/RSVP/review,
+friend-plan drafts, talent listings/booking estimates, appearance/profile controls.
+Database: versioned identity/social schema, session token-hash constraints,
+post visibility predicate, accepted follow checks, two-way blocks, moderation/deletion filters.
+Database is NOT connected to the app or deployed in Google Cloud.
+No live OAuth, shared data, invitations, tickets, payments or payouts.
+No deployed Cloud Run URL verified. Rendered screenshots still need visual/accessibility review.
 
-## Tests
-Verified by GitHub Actions on 82f12684f32485cf8166478869b6b6f6a59eaf2c:
-- Node syntax checks passed.
-- All 6 unit/HTTP tests passed.
-- Chromium browser journey checks passed: post persistence, escaped user text,
-  RSVP, theme change, event approval, booking draft and mobile horizontal overflow.
-- Docker image build passed.
-- Desktop/mobile screenshots uploaded to the workflow artifacts.
-No human visual inspection of screenshots has been completed in this session.
+## Cloud blocker — do not repeat blindly
+Existing cloud applications were left unchanged.
+Run 3e1223a5-26ea-45b1-aaa1-33bd3e8c95ab reached a new-project form named Tired Social Platform
+but returned no confirmed project ID. Its summary was ambiguous about whether Create was submitted.
+Follow-up reconciliation task failed to start; run history search returned no matching run.
+Therefore project creation is UNKNOWN, not complete and not definitely absent.
+Before any creation retry, reconcile project list/notifications read-only.
+Billing account and repository deployment integration remain unverified.
 
-## Resolved blocker
-ubuntu-latest selected Ubuntu 26.04, unsupported by pinned Playwright.
-Pinned verification to Ubuntu 22.04 and reran successfully.
-Local executor remains unavailable; source edits and CI no longer depend on it.
+Failed routes: Cloud Shell terminal input; Cloud Shell editor save/input.
+Working route: direct GitHub source edits and GitHub Actions verification.
+Never return to the failed browser typing loops without evidence of a changed capability.
 
-## Limits
-Data remains browser-local. Sample people and listings are explicitly labeled.
-No live authentication, shared database, invitations, ticket purchases, payments or payouts.
-Cloud Run deployment has NOT been performed or verified.
-Repository is public; never commit secrets or private account details.
+## Next designated task
+U03 — migrate the tested UI to React/TypeScript, preserving CSS and all passing user journeys.
+Set U03 in_progress before implementation, keep one primary task, then verify and attach evidence.
+D03 server data-access/migration runner and U02 visual/accessibility inspection are independent ready tasks.
+Cloud task C01 remains blocked until a functioning management route or confirmed project/billing details
+allow read-only reconciliation. Do not let this prevent ready development work.
 
-## Next session: priority order
-1. Read AGENTS.md, PLAN.md and this checkpoint; inspect current head.
-2. Establish a dedicated Google Cloud project/staging deployment using this repository,
-   preferring supported source/CI integration over browser typing into Cloud Shell.
-3. Verify staging URL and matching source revision, plus inspect desktop/mobile screenshots.
-4. Migrate UI to React/TypeScript before shared-account integration, preserving tested flows.
-5. Implement Google identity, PostgreSQL schema and server authorization as the first real
-   multiuser journey: sign in, update profile, publish a post, interact from another account.
-
-Do not restart the project or repeat resolved access experiments.
-Update this file with exact evidence after each bounded development outcome.
+## Continuity rules
+Read AGENTS.md, PLAN.md, progress.json and this file.
+Use workflow summary for ready tasks. Validate tracker with node scripts/progress.mjs.
+No percentage-of-product claims. Done requires reviewed acceptance evidence.
+CI reports priorities; it does not autonomously implement backlog work or verify external evidence links.

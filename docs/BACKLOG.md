@@ -9,7 +9,7 @@ It validates dependencies, task states, evidence fields, retry gates and a one-t
 ## Current map
 - Complete: independent source/runtime; automated platform checks; local UI milestone;
   master plan/backend contract; PostgreSQL social schema and database tests.
-- In verification: progress tracking workflow.
+- Complete: dependency-aware progress tracking workflow (verified in GitHub Actions).
 - Ready: rendered UI/accessibility review, React/TypeScript migration, server data-access layer.
 - Blocked: cloud project/deployment access, pending exact project ID and billing evidence.
 - Not implemented: live identity, shared social APIs, production events/plans,
