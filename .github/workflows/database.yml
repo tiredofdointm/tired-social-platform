@@ -1,0 +1,43 @@
+name: Verify database
+on:
+  push:
+    paths:
+      - 'db/**'
+      - '.github/workflows/database.yml'
+  pull_request:
+    paths:
+      - 'db/**'
+      - '.github/workflows/database.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  database:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: platform_test
+          POSTGRES_PASSWORD: ephemeral_ci_only
+          POSTGRES_DB: platform_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U platform_test -d platform_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: platform_test
+      PGPASSWORD: ephemeral_ci_only
+      PGDATABASE: platform_test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply migration
+        run: psql -v ON_ERROR_STOP=1 -f db/migrations/001_identity_social.sql
+      - name: Test data and visibility constraints
+        run: psql -v ON_ERROR_STOP=1 -f db/tests/identity_social.sql
