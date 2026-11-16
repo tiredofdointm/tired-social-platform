@@ -10,7 +10,9 @@ npm run check
 npm test
 npm start
 ```
-Open port 8080. Runtime has no third-party dependencies. Playwright is development-only.
+npm test builds dist/ before testing. For a build without tests, run npm run build before npm start.
+Open port 8080. The HTTP runtime has no third-party server dependencies; React is bundled into the client.
+The multi-stage Docker build installs build tools separately from the runtime. Playwright is development-only.
 Browser checks: `npx playwright install --with-deps chromium && npm run test:browser`.
 
 ## Cloud Run staging

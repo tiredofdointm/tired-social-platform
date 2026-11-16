@@ -10,7 +10,8 @@ It validates dependencies, task states, evidence fields, retry gates and a one-t
 - Complete: independent source/runtime; automated platform checks; local UI milestone;
   master plan/backend contract; PostgreSQL social schema and database tests.
 - Complete: dependency-aware progress tracking workflow (verified in GitHub Actions).
-- Ready: rendered UI/accessibility review, React/TypeScript migration, server data-access layer.
+- Complete: React/TypeScript migration with preserved browser-local journeys.
+- Ready: rendered UI/accessibility review and server data-access layer (designated next).
 - Blocked: cloud project/deployment access, pending exact project ID and billing evidence.
 - Not implemented: live identity, shared social APIs, production events/plans,
   ticket sales, provider payouts and launch.

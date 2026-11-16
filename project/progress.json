@@ -3,9 +3,9 @@
   "updated": "2026-11-16",
   "objective": "Independent Google Cloud social/events/talent platform; no Laravel; customizable UI and verified production journeys.",
   "currentSession": {
-    "primaryTask": "U03",
-    "nextTask": "U03",
-    "reason": "Migrate the existing UI to typed React components while preserving storage and verified journeys."
+    "primaryTask": null,
+    "nextTask": "D03",
+    "reason": "React migration is verified. Implement the database access and versioned migration runner needed before Google identity and shared social APIs."
   },
   "workInProgressLimit": 1,
   "tasks": [
@@ -121,13 +121,16 @@
     {
       "id": "U03",
       "title": "Migrate tested UI to React and TypeScript",
-      "status": "in_progress",
+      "status": "done",
       "priority": 1,
       "dependsOn": [
         "U01"
       ],
       "acceptance": "Preserve existing UI/journeys; typecheck, browser checks and container build pass.",
-      "evidence": [],
+      "evidence": [
+        "https://github.com/tiredofdointm/tired-social-platform/actions/runs/43980895404",
+        "https://github.com/tiredofdointm/tired-social-platform/commit/6a805432a5b7855249e2a5ad0c827316d4c4d9d7"
+      ],
       "workstream": "U"
     },
     {

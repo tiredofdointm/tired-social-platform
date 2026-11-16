@@ -30,10 +30,9 @@ Never put secrets or private account details in this public repository.
 Production proposal: React/TypeScript UI, Node/TypeScript API, Cloud Run,
 PostgreSQL on Cloud SQL, Cloud Storage uploads, Google sign-in,
 Stripe Connect, queued background tasks and structured logs.
-The initial dependency-free runtime uses browser ES modules and Node's HTTP server.
-This isolates the first UI milestone from dependency/build-environment blockers.
-Migrate to React/TypeScript before the shared-account backend integration;
-preserve tested business rules and the visual system.
+Implemented: strict TypeScript React components bundled with esbuild, served by Node's HTTP server.
+The runtime serves built assets without third-party server packages. Browser-local preview data
+retains the original storage format. Shared-account backend integration remains pending.
 
 ## Product rules
 - Users can have personal, business and provider capabilities under one account.

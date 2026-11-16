@@ -2,7 +2,8 @@
 Date: 2026-11-16
 
 ## Current outcome
-Independent source creation, interactive UI foundation, database foundation and progress workflow are committed.
+Independent source creation, React/TypeScript UI, database foundation and progress workflow are committed.
+U03 is complete. The next designated task is D03.
 Authoritative task states: project/progress.json. Do not infer product completion from prototype milestones.
 
 ## Reviewed evidence
@@ -16,8 +17,20 @@ Authoritative task states: project/progress.json. Do not infer product completio
 - Progress workflow: https://github.com/tiredofdointm/tired-social-platform/actions/runs/43975153871
   Dependency validation and next-task report passed.
 
+- React migration: 6a805432a5b7855249e2a5ad0c827316d4c4d9d7.
+- Expanded migration verification: https://github.com/tiredofdointm/tired-social-platform/actions/runs/43980895404
+  Code/test revision: ca4c3ad3e2577b004a0f69508a9ac1479f34a77a.
+  Strict TypeScript, 6 unit/HTTP tests, Chromium journeys and multi-stage Docker build passed.
+  Browser coverage includes old-format storage, post/comment/plan persistence, service listing,
+  search preserving an unsent draft, Escape dialogs, theme, review/approval, RSVP, booking and mobile overflow.
+  Expanded test first used textbox for a search input; corrected to native searchbox role.
+  No application workaround was needed for that test-selector failure.
+
 ## Implemented versus live
-UI: responsive local posts, likes/comments/follows, feeds, events/RSVP/review,
+UI: reusable React components with typed state/forms/dialogs and esbuild production assets.
+The original browser storage key and CSS are preserved. npm install and npm run build are required
+before npm start; npm test runs the build automatically.
+UI journeys: responsive local posts, likes/comments/follows, feeds, events/RSVP/review,
 friend-plan drafts, talent listings/booking estimates, appearance/profile controls.
 Database: versioned identity/social schema, session token-hash constraints,
 post visibility predicate, accepted follow checks, two-way blocks, moderation/deletion filters.
@@ -39,9 +52,10 @@ Working route: direct GitHub source edits and GitHub Actions verification.
 Never return to the failed browser typing loops without evidence of a changed capability.
 
 ## Next designated task
-U03 — migrate the tested UI to React/TypeScript, preserving CSS and all passing user journeys.
-Set U03 in_progress before implementation, keep one primary task, then verify and attach evidence.
-D03 server data-access/migration runner and U02 visual/accessibility inspection are independent ready tasks.
+D03 — implement parameterized PostgreSQL access and a versioned migration runner.
+Read the existing migration and BACKEND-CONTRACT.md, mark D03 in_progress, and verify migrations
+and data access against disposable PostgreSQL in CI. Never import browser demo data silently.
+U02 visual/accessibility inspection remains ready; screenshots exist but are not visually reviewed.
 Cloud task C01 remains blocked until a functioning management route or confirmed project/billing details
 allow read-only reconciliation. Do not let this prevent ready development work.
 
