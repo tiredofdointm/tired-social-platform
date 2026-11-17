@@ -282,3 +282,17 @@ Database and platform CI passed for a8a4638cbd5a6e85f4ae6c9a3e5bc66954c30b63. Po
 browser accounts verified RSVP persistence, single-seat concurrency and plan
 access before and after invitation acceptance. Next implement E02 publishing
 policy and organizer review controls. Staging still needs authenticated verification.
+
+## Publishing review continuation
+Event publication now defaults to automatic and can be switched to manual by
+a designated admin. Apply migration 004 before activating the authenticated
+runtime. Grant publishing access through trusted database administration by
+inserting the intended user's verified internal UUID into publishing_admins.
+Service publishing is still preview-only and remains part of E02.
+Local type checks, unit tests, preview browser tests, and disposable PostgreSQL
+and browser integration passed. Tests cover unauthorized policy changes,
+pending RSVP denial, and duplicate review denial.
+The unauthenticated staging probe still returned 404. Use the disposable
+database suite to verify application behavior locally. Deployment verification
+requires comparing the service URL and revision from the authenticated Cloud Run
+console, then probing /healthz with an identity that has invocation access.

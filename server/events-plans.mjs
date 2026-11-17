@@ -5,11 +5,42 @@ const visibleOwner = (owner) => `EXISTS (SELECT 1 FROM users u WHERE u.id=${owne
  OR (b.blocker_id=${owner} AND b.blocked_id=$1))`;
 
 export async function eventsPlans({pool,actor,path,method,req,send,fail,readJson,fields,text,uuid}) {
+ if (path==='/api/v1/events/publishing' && method==='GET') {
+  const {rows:[policy]}=await pool.query(`SELECT manual_review,
+   EXISTS(SELECT 1 FROM publishing_admins WHERE user_id=$1) AS admin
+   FROM event_publishing_policy`,[actor]);
+  const {rows}=await pool.query(`SELECT id,title,venue,starts_at,publication FROM events
+   WHERE publication<>'published' AND (owner_id=$1 OR $2 AND publication='pending')
+   ORDER BY starts_at,id LIMIT 100`,[actor,policy.admin]);
+  return send(200,{...policy,submissions:rows});
+ }
+ if (path==='/api/v1/events/publishing' && method==='PUT') {
+  const body=await readJson(req);
+  fields(body,['manualReview']);
+  if(typeof body.manualReview!=='boolean')fail(400,'invalid_policy');
+  const result=await pool.query(`UPDATE event_publishing_policy SET manual_review=$2
+   WHERE EXISTS(SELECT 1 FROM publishing_admins WHERE user_id=$1)`,[actor,body.manualReview]);
+  if(!result.rowCount)fail(403,'review_admin_required');
+  return send(200,{manual_review:body.manualReview});
+ }
+ const review=/^\/api\/v1\/events\/([^/]+)\/review$/.exec(path);
+ if(review && method==='PUT'){
+  if(!uuid(review[1]))fail(404,'not_found');
+  const body=await readJson(req);
+  fields(body,['decision']);
+  if(!['published','rejected'].includes(body.decision))fail(400,'invalid_decision');
+  const result=await pool.query(`UPDATE events SET publication=$3, reviewed_by=$1, reviewed_at=now()
+   WHERE id=$2 AND publication='pending'
+   AND EXISTS(SELECT 1 FROM publishing_admins WHERE user_id=$1)
+   RETURNING publication`,[actor,review[1],body.decision]);
+  if(!result.rowCount)fail(404,'not_found');
+  return send(200,result.rows[0]);
+ }
  if (path === '/api/v1/events' && method === 'GET') {
   const {rows}=await pool.query(`SELECT e.id,e.title,e.venue,e.starts_at,e.capacity,
    (SELECT count(*)::int FROM rsvps r WHERE r.event_id=e.id) AS attending,
    EXISTS(SELECT 1 FROM rsvps r WHERE r.event_id=e.id AND r.user_id=$1) AS going
-   FROM events e WHERE e.starts_at>now() AND ${visibleOwner('e.owner_id')}
+   FROM events e WHERE e.starts_at>now() AND e.publication='published' AND ${visibleOwner('e.owner_id')}
    ORDER BY e.starts_at,e.id LIMIT 100`,[actor]);
   return send(200,{events:rows});
  }
@@ -35,7 +66,9 @@ export async function eventsPlans({pool,actor,path,method,req,send,fail,readJson
    values.push(body.capacity);
   }
   const {rows}=await pool.query(event
-   ?'INSERT INTO events(owner_id,title,starts_at,venue,capacity) VALUES($1,$2,$3,$4,$5) RETURNING id'
+   ?`INSERT INTO events(owner_id,title,starts_at,venue,capacity,publication)
+      SELECT $1,$2,$3,$4,$5,CASE WHEN manual_review THEN 'pending' ELSE 'published' END
+      FROM event_publishing_policy RETURNING id,publication`
    :'INSERT INTO friend_plans(owner_id,title,starts_at,details) VALUES($1,$2,$3,$4) RETURNING id',values);
   return send(201,rows[0]);
  }
@@ -44,7 +77,7 @@ export async function eventsPlans({pool,actor,path,method,req,send,fail,readJson
  const [,resource,id,action]=match;
  if (resource==='events' && action==='rsvp' && ['PUT','DELETE'].includes(method)) {
   await transaction(pool,async db=>{
-   const {rows}=await db.query(`SELECT capacity FROM events e WHERE id=$2 AND starts_at>now()
+   const {rows}=await db.query(`SELECT capacity FROM events e WHERE id=$2 AND starts_at>now() AND publication='published'
     AND ${visibleOwner('e.owner_id')} FOR UPDATE`,[actor,id]);
    if (!rows.length) fail(404,'not_found');
    if (method==='DELETE') {

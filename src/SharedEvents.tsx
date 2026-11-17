@@ -4,7 +4,10 @@ import type {FormEvent} from 'react';
 type Event = {id:string;title:string;venue:string;starts_at:string;capacity:number;attending:number;going:boolean};
 type Plan = {id:string;title:string;details:string|null;starts_at:string|null;owner:boolean;accepted:boolean};
 
+type Publishing={manual_review:boolean;admin:boolean;submissions:(Event&{publication:string})[]};
+
 export function SharedEvents(){
+ const [publishing,setPublishing]=useState<Publishing|null>(null);
  const [events,setEvents]=useState<Event[]>([]);
  const [plans,setPlans]=useState<Plan[]>([]);
  const [token,setToken]=useState('');
@@ -22,9 +25,10 @@ export function SharedEvents(){
   return data;
  }
  async function refresh(){
-  const [eventList,planList]=await Promise.all([api<{events:Event[]}>('events'),api<{plans:Plan[]}>('plans')]);
+  const [eventList,planList,policy]=await Promise.all([api<{events:Event[]}>('events'),api<{plans:Plan[]}>('plans'),api<Publishing>('events/publishing')]);
   setEvents(eventList.events);
   setPlans(planList.plans);
+  setPublishing(policy);
  }
  async function load(){
   setState('loading');
@@ -45,7 +49,7 @@ export function SharedEvents(){
  },[]);
  async function action(work:()=>Promise<unknown>,success:string){
   setBusy(true);setMessage('');
-  try{await work();await refresh();setMessage(success);}
+  try{const result=await work();await refresh();setMessage(typeof result==='string'?result:success);}
   catch(error){setMessage((error as Error).message);}
   finally{setBusy(false);}
  }
@@ -58,8 +62,10 @@ export function SharedEvents(){
    const title=values.get('title');
    const body=kind==='events'?{title,startsAt,venue:values.get('venue'),capacity:Number(values.get('capacity'))}
     :{title,startsAt,details:values.get('details')};
-   await api(kind,'POST',body);
-   form.reset();
+   return api<{publication?:string}>(kind,'POST',body).then(result=>{
+    form.reset();
+    return result.publication==='pending'?'Submitted for review.':undefined;
+   });
   },kind==='events'?'Event published.':'Private plan created.');
  }
  if(state==='loading')return <p role="status">Loading events and plans…</p>;
@@ -79,10 +85,28 @@ export function SharedEvents(){
      <label>Venue<input name="venue" required maxLength={160}/></label>
      <label>Capacity<input name="capacity" required type="number" min={1} max={10000} defaultValue={20}/></label>
     </>:<label>Meetup details<textarea name="details" required maxLength={1000}/></label>}
-    <button className="primary" disabled={busy}>{kind==='events'?'Publish event':'Create private plan'}</button>
+    <button className="primary" disabled={busy}>{kind==='events'?(publishing?.manual_review?'Submit event for review':'Publish event'):'Create private plan'}</button>
    </form>
   </details>
   <button disabled={busy} onClick={()=>void action(async()=>{},'Lists refreshed.')}>Refresh lists</button>
+  {publishing?.admin&&<section className="panel">
+   <h2>Event publishing</h2>
+   <p>{publishing.manual_review?'New events require approval.':'New events publish automatically.'}</p>
+   <button disabled={busy} onClick={()=>void action(
+    ()=>api('events/publishing','PUT',{manualReview:!publishing.manual_review}),'Publishing policy saved.'
+   )}>{publishing.manual_review?'Enable automatic publishing':'Require manual review'}</button>
+  </section>}
+  {!!publishing?.submissions.length&&<section className="panel">
+   <h2>Event submissions</h2>
+   {publishing.submissions.map(event=><article key={event.id}>
+    <h3>{event.title}</h3><p>{event.venue} · {new Date(event.starts_at).toLocaleString()} · {event.publication}</p>
+    {publishing.admin&&event.publication==='pending'&&<div className="actions">
+     {(['published','rejected'] as const).map(decision=><button key={decision} disabled={busy} onClick={()=>void action(
+      ()=>api('events/'+event.id+'/review','PUT',{decision}),decision==='published'?'Event approved.':'Event rejected.'
+     )}>{decision==='published'?'Approve':'Reject'}</button>)}
+    </div>}
+   </article>)}
+  </section>}
   <h2>Upcoming events</h2>
   <div className="stack">{events.map(event=><article className="panel" key={event.id}>
    <h3>{event.title}</h3><p>{event.venue} · {new Date(event.starts_at).toLocaleString()}</p>
