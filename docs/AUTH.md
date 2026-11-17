@@ -2,7 +2,7 @@
 
 The server implementation is available behind `AUTH_MODE=google`. The default is
 `preview`: no database is contacted and sample social activity stays in the browser.
-Google identity does not turn the existing demo feed into shared production data.
+The shared community screen uses the authenticated social API; the original demo feed remains separate. See SHARED-SOCIAL.md.
 
 ## Activation
 1. Provision the dedicated PostgreSQL database and restrict connectivity to the service.
@@ -37,7 +37,7 @@ Cloud Run health JSON includes K_REVISION when the runtime supplies it.
   browser session. Expired, revoked, suspended and deleted accounts cannot access /me.
 - Logout requires POST, the configured exact Origin and a session-bound CSRF token.
   Every future state-changing API must reuse equivalent authorization/CSRF checks;
-  the social repository is not exposed as an HTTP mutation API yet.
+  the shared social HTTP handler applies these checks to its mutation routes.
 - Auth responses are not cached. Errors do not reveal provider tokens or database
   details. Per-instance login caps are only a baseline: configure production edge
   rate limiting and expired-session maintenance before launch.
@@ -52,4 +52,4 @@ rotation, CSRF, expiry, suspension and logout. Its provider exchange is mocked.
 existing real browser preview journeys. These are not live Google OAuth evidence.
 
 Live database provisioning, OAuth client configuration, real provider sign-in,
-Google Cloud health verification, and shared social API integration remain pending.
+Google Cloud health verification and live shared-community activation remain pending.

@@ -6,7 +6,7 @@ const assets = new Map([
  ['/app.js', ['app.js', 'text/javascript; charset=utf-8']],
  ['/styles.css', ['styles.css', 'text/css; charset=utf-8']]
 ]);
-export function createServer({auth=null} = {}) {
+export function createServer({auth=null,social=null} = {}) {
  return http.createServer(async (req, res) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
@@ -16,6 +16,7 @@ export function createServer({auth=null} = {}) {
   try { url = new URL(req.url, 'http://localhost'); } catch { res.writeHead(400); return res.end('Bad request'); }
   const path=url.pathname;
   if(auth && await auth(req,res,url)) return;
+  if(social && await social(req,res,url)) return;
   if (!['GET', 'HEAD'].includes(req.method)) {
    res.writeHead(405, {'Allow':'GET, HEAD'}); return res.end('Method not allowed');
   }
@@ -40,12 +41,14 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
  const port = Number(process.env.PORT || 8080);
  const {authConfig,createAuthHandler}=await import('./server/auth.mjs');
  const config=authConfig();
- let pool,auth;
+ let pool,auth,social;
  if(config) {
   const {createDatabasePool}=await import('./server/database.mjs');
   pool=createDatabasePool(); auth=createAuthHandler({config,pool});
+  const {createSocialHandler}=await import('./server/social-http.mjs');
+  social=createSocialHandler({config,pool});
  }
- const server=createServer({auth}).listen(port,'0.0.0.0',()=>console.log(JSON.stringify({event:'server_started',port})));
+ const server=createServer({auth,social}).listen(port,'0.0.0.0',()=>console.log(JSON.stringify({event:'server_started',port})));
  for(const signal of ['SIGTERM','SIGINT']) process.once(signal,()=>{
   server.close(async()=>{if(pool) await pool.end();});
  });

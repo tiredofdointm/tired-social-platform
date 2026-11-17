@@ -1,3 +1,5 @@
+import { socialBrowserChecks } from './social-browser-checks.mjs';
+import { socialHttpChecks } from './social-http-checks.mjs';
 import { authChecks } from './auth-checks.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -105,4 +107,6 @@ test('migration runner and parameterized social access', async t => {
     await assert.rejects(repo.listFeed(null, { limit: 101 }), /page size/);
   });
   await authChecks(t,pool);
+  await socialHttpChecks(t,pool);
+  await socialBrowserChecks(t,pool);
 });

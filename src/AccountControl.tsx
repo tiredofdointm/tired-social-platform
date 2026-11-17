@@ -16,12 +16,12 @@ export function AccountControl(){
    setMode('google');
   }catch{setMode('error');}
  }
- useEffect(()=>{void load();},[]);
+ useEffect(()=>{void load();const reload=()=>void load();window.addEventListener('tired-profile-change',reload);return()=>window.removeEventListener('tired-profile-change',reload);},[]);
  async function logout(){
   if(!account)return;
   setBusy(true);
   try{const response=await fetch('/auth/logout',{method:'POST',headers:{'X-CSRF-Token':account.csrfToken}});
-   if(!response.ok)throw new Error();setAccount(null);
+   if(!response.ok)throw new Error();setAccount(null);window.dispatchEvent(new Event('tired-account-change'));
   }catch{setMode('error');}finally{setBusy(false);}
  }
  if(mode==='preview'||mode==='loading')return null;

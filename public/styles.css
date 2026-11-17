@@ -7,3 +7,7 @@ body[data-density=compact] .panel,body[data-density=compact] .card-body{padding:
 
 .account-control{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;min-width:0}.account-control span{max-width:12rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media(max-width:700px){.topbar{flex-wrap:wrap}.top-actions{flex-wrap:wrap}.account-control span{max-width:8rem}}
+
+.shared-community{max-width:860px;margin:auto}.shared-community>.panel,.shared-community>.filters{margin-bottom:20px}.shared-community label{display:block;margin:12px 0}.shared-community input,.shared-community textarea,.shared-community select{display:block;width:100%;margin-top:6px}.shared-community textarea{min-height:90px;resize:vertical}.shared-person{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:16px}.shared-community .post-text{white-space:pre-wrap;overflow-wrap:anywhere}.shared-community summary{cursor:pointer;font-weight:600}
+
+.shared-community .actions{align-items:center}

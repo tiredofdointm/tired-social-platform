@@ -130,11 +130,11 @@ export function createAuthHandler({config,pool,provider=googleProvider(config)})
     catch { throw new AuthError(401,'invalid_identity'); }
     const session=await repo.signIn(identity,sessionToken);
     res.setHeader('Set-Cookie',[cookie(LOGIN_COOKIE,'',0),cookie(SESSION_COOKIE,session.token,7*86400)]);
-    res.writeHead(302,{Location:'/#feed'});res.end();return true;
+    res.writeHead(302,{Location:'/#community'});res.end();return true;
    }
    const user=await repo.session(sessionToken);
    if(!user) throw new AuthError(401,'authentication_required');
-   if(url.pathname==='/api/v1/me'){json(res,200,{user,csrfToken:csrfFor(sessionToken),socialMode:'local-preview'});return true;}
+   if(url.pathname==='/api/v1/me'){json(res,200,{user,csrfToken:csrfFor(sessionToken),socialMode:'shared-api'});return true;}
    if(req.headers.origin!==config.origin || !same(req.headers['x-csrf-token'],csrfFor(sessionToken))) throw new AuthError(403,'invalid_csrf');
    await repo.revoke(sessionToken);
    res.setHeader('Set-Cookie',cookie(SESSION_COOKIE,'',0));json(res,200,{signedOut:true});return true;
@@ -145,3 +145,6 @@ export function createAuthHandler({config,pool,provider=googleProvider(config)})
   }
  };
 }
+
+export function sessionTokenFrom(req) {try{return cookies(req).get(SESSION_COOKIE);}catch{return null;}}
+export function validMutation(req,sessionToken,origin) {return validToken(sessionToken) && req.headers.origin===origin && same(req.headers['x-csrf-token'],csrfFor(sessionToken));}

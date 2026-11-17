@@ -1,5 +1,5 @@
 # Production backend contract
-Status: implementation specification, not a live backend or applied database migration.
+Status: architecture roadmap. Identity and shared social implementation are described in AUTH.md and SHARED-SOCIAL.md; later commerce/events contracts below remain planned.
 Read with PLAN.md. Initial delivery is the account/profile/post interaction journey.
 
 ## Ownership and data model

@@ -229,3 +229,19 @@ This documentation-only checkpoint uses [skip ci] to avoid redundant deployments
 
 Latest checked cloud source223f0bf also passed both Cloud Build checks: staging
 d891daf5-5fff-4be6-a5b3-b40215b6d0ca and europe116bd49e-c7ad-4f75-84dc-c38b50fd5d13.
+
+## Shared social implementation continuation (2026-11-17)
+S01 implemented and entering CI verification. Added authenticated profile/post/feed,
+follow request approval/decline, comments, idempotent likes and block/unblock routes.
+The new #community screen calls these APIs and stays separate from local demo data.
+All actors derive from sessions; mutations require Origin/CSRF and bounded allowed
+fields. Feed and comments apply privacy/block/moderation filters server-side.
+Two browser accounts tested with the actual server and disposable PostgreSQL; only
+session bootstrapping bypasses Google. Profile/post/comment persistence, follows,
+private posts, mobile layout and logout passed locally. OAuth activation remains A02.
+Form textarea/select accessible labels were corrected after browser checks exposed
+ambiguous labels containing control text. Screenshot capture now starts at page top.
+See docs/SHARED-SOCIAL.md for API scope, limits and production prerequisites.
+Next action: review platform and database CI for this implementation, then record
+S01 evidence and designate E01 shared events/private plans. Cloud C02/A02 remain
+blocked; no additional cloud configuration or DNS changes were made in this slice.

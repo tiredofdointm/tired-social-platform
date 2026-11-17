@@ -10,7 +10,7 @@
   "scripts": {
     "start": "node server.mjs",
     "test": "node --test test/*.test.mjs",
-    "check": "tsc --noEmit && node --check server.mjs && node --check scripts/build.mjs && node --check db/migrate.mjs && node --check server/database.mjs && node --check server/social-repository.mjs && node --check server/auth.mjs",
+    "check": "tsc --noEmit && node --check server.mjs && node --check scripts/build.mjs && node --check db/migrate.mjs && node --check server/database.mjs && node --check server/social-repository.mjs && node --check server/auth.mjs && node --check server/social-http.mjs",
     "test:browser": "node scripts/browser-check.mjs",
     "build": "node scripts/build.mjs",
     "pretest": "npm run build",

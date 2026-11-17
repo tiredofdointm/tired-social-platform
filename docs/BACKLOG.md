@@ -14,12 +14,12 @@ It validates dependencies, task states, evidence fields, retry gates and a one-t
 - Complete: server data-access layer and migration runner; PostgreSQL 16 CI passed.
 - Cloud Run staging (C02): blocked on authenticated endpoint verification. GitHub connected and build succeeded; console reports healthy service, but reported /healthz URL returns 404. Resolve URL/configuration discrepancy before marking complete.
 - Complete: server Google identity and sessions (A01), verified in unit/database/browser/container checks.
-- Next application task: first shared social journey (S01).
+- Current verification task: first shared social journey (S01), including real PostgreSQL-backed two-browser journeys.
 - Blocked: live identity activation (A02), pending cloud database, OAuth configuration and verified host access.
 - Ready: rendered UI/accessibility review.
 - Complete: cloud project identity, active billing linkage, and required API verification (C01).
 - Pending: verified staging service and subsequent domain connection.
-- Not implemented: live identity, shared social APIs, production events/plans,
+- Not activated live: identity and shared social APIs. Not implemented: production events/plans,
   ticket sales, provider payouts and launch.
 
 This is milestone tracking, not a claim that a percentage of the full product is done.
