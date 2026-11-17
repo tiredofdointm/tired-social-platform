@@ -25,7 +25,7 @@ jobs:
         run: |
           docker run -d --name tired-health -e K_REVISION=ci-runtime -p 8080:8080 tired-social:test
           trap 'docker logs tired-health; docker rm -f tired-health' EXIT
-          curl --fail --retry 10 --retry-connrefused --retry-delay 1 http://127.0.0.1:8080/healthz > /tmp/tired-health.json
+          curl --fail --retry 10 --retry-all-errors --retry-delay 1 --max-time 3 http://127.0.0.1:8080/healthz --output /tmp/tired-health.json
           node --input-type=module -e "import fs from 'node:fs'; import assert from 'node:assert/strict'; const h=JSON.parse(fs.readFileSync('/tmp/tired-health.json')); assert.equal(h.status,'ok'); assert.equal(h.revision,'ci-runtime');"
       - uses: actions/upload-artifact@v4
         if: always()
