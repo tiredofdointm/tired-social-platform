@@ -3,9 +3,9 @@
   "updated": "2026-11-17",
   "objective": "Independent Google Cloud social/events/talent platform; no Laravel; customizable UI and verified production journeys.",
   "currentSession": {
-    "primaryTask": null,
+    "primaryTask": "E02",
     "nextTask": "E02",
-    "reason": "Shared events and private plans verified. Next implement configurable publishing and review."
+    "reason": "Shared service publishing is implemented. Verify migration 005 and the signed-in directory before release."
   },
   "workInProgressLimit": 1,
   "tasks": [
@@ -247,7 +247,7 @@
     {
       "id": "E02",
       "title": "Configurable publishing and review",
-      "status": "ready",
+      "status": "verification",
       "priority": 1,
       "dependsOn": [
         "E01"
@@ -354,11 +354,11 @@
       "evidence": [],
       "workstream": "A",
       "blocker": {
-        "cause": "Cloud endpoint access unresolved; dedicated deployed database and OAuth credentials/redirect not configured.",
-        "retryCondition": "Verified HTTPS origin/access model and authenticated cloud configuration channel available.",
-        "nextAction": "Provision dedicated database, apply migrations, configure Secret Manager and OAuth redirect, then execute real two-account login checks from docs/AUTH.md.",
+        "cause": "One production Google sign-in returned to Community and displayed the account name. The second account and logout revocation checks remain open.",
+        "retryCondition": "A second real Google account is available for the end-to-end verification.",
+        "nextAction": "Check that two independent Google accounts sign in over HTTPS, validate shared data isolation, and confirm logout revokes access.",
         "attempts": [
-          "Local signed-JWT, database and browser tests passed; these do not prove live Google authentication."
+          "Cloud Run migration execution tired-social-migrate-52lww confirmed schema version 4. Live user confirmed Google callback and profile display."
         ]
       }
     }
