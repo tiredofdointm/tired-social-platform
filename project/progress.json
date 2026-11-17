@@ -156,20 +156,22 @@
       "acceptance": "Exact project ID and billing linkage are observed; duplicate project creation is ruled out.",
       "evidence": [
         "https://agent.tinyfish.ai/runs/5e7c0256-b6f7-4286-a0e9-270573b61289",
-        "https://agent.tinyfish.ai/runs/940e2811-f88d-4e52-9aa6-7a4c23ce7ece"
+        "https://agent.tinyfish.ai/runs/940e2811-f88d-4e52-9aa6-7a4c23ce7ece",
+        "https://agent.tinyfish.ai/runs/3d46e89e-454a-4037-9475-c2c5b75730f1"
       ],
       "workstream": "C",
       "blocker": {
-        "cause": "Project tired-social-platform (Tired Social Platform) is confirmed. No billing account is linked. Enabling run.googleapis.com returned Billing required; no deployment endpoint is verified.",
-        "retryCondition": "Link a usable existing billing account to the confirmed project, then enable Cloud Run and verify deployment access. Do not create another project or retry Cloud Shell typing.",
-        "nextAction": "Finish inspecting available billing account choices and resolve linkage; then enable run.googleapis.com.",
+        "cause": "Confirmed project tired-social-platform has no linked billing. The only account shown in the selector, My Billing Account, is closed. Cloud Run enablement returned Billing required.",
+        "retryCondition": "A billing administrator reopens the existing account or makes another active billing account available and authorizes its use; link it to tired-social-platform, then enable Cloud Run. Do not recreate the project.",
+        "nextAction": "Resolve closed billing account at Google Cloud Billing, then link an active account to tired-social-platform.",
         "attempts": [
           "Cloud Shell terminal input failed; no files executed.",
           "Cloud Shell editor save/input failed; no files saved.",
           "Repository source creation succeeded via GitHub API; do not retry browser editing.",
           "Cloud Run setup run 3e1223a5-26ea-45b1-aaa1-33bd3e8c95ab ended without project confirmation.",
           "2026-11-16: project Settings confirmed ID and name; signed-in user has Owner (Legacy). Earlier generic permission warning was not reproduced on API detail page.",
-          "2026-11-16: Enable Cloud Run action returned Billing required. No API enablement or billing linkage completed."
+          "2026-11-16: Enable Cloud Run action returned Billing required. No API enablement or billing linkage completed.",
+          "Billing selector inspection completed: one account named My Billing Account, closed; costs-view permission warning observed. No linkage submitted."
         ]
       }
     },

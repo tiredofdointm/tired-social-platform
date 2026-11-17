@@ -56,3 +56,8 @@ Project ID tired-social-platform, display name Tired Social Platform. Settings a
 The project has no billing account linked. Attempting to enable Cloud Run returned Billing required.
 The earlier generic permission warning does not establish missing IAM rights. No deployable endpoint is verified.
 API attempt: https://agent.tinyfish.ai/runs/940e2811-f88d-4e52-9aa6-7a4c23ce7ece
+
+## Billing selector result
+The only displayed account, My Billing Account, is closed. A costs-view permission warning was also shown.
+No billing linkage was submitted. A billing administrator must reopen it or provide an active account.
+Evidence: https://agent.tinyfish.ai/runs/3d46e89e-454a-4037-9475-c2c5b75730f1

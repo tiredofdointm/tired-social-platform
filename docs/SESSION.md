@@ -55,6 +55,8 @@ Attempting to enable run.googleapis.com returned Billing required; API remains d
 Attempt: https://agent.tinyfish.ai/runs/940e2811-f88d-4e52-9aa6-7a4c23ce7ece
 No deployable service URL is verified. Disabled API pages alone do not prove absence of every service.
 Existing unrelated projects are untouched. Never create a duplicate project.
+Billing selector result: only My Billing Account was shown; it is closed. Costs-view permission warning observed.
+No billing linkage submitted. Billing administrator must reopen it or provide an active account.
 Billing choices inspection: https://agent.tinyfish.ai/runs/3d46e89e-454a-4037-9475-c2c5b75730f1
 
 Working source route: GitHub API and Actions. Failed terminal/editor typing routes remain retired.
