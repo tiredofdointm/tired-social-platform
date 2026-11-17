@@ -5,7 +5,7 @@
   "currentSession": {
     "primaryTask": null,
     "nextTask": "D03",
-    "reason": "React migration is verified. Implement the database access and versioned migration runner needed before Google identity and shared social APIs."
+    "reason": "User prioritized tired.events domain connection. Cloudflare audit and cutover configuration are prepared; billing linkage blocks Google deployment and DNS cutover. D03 remains the next independent ready implementation task."
   },
   "workInProgressLimit": 1,
   "tasks": [
@@ -154,17 +154,22 @@
         "F02"
       ],
       "acceptance": "Exact project ID and billing linkage are observed; duplicate project creation is ruled out.",
-      "evidence": [],
+      "evidence": [
+        "https://agent.tinyfish.ai/runs/5e7c0256-b6f7-4286-a0e9-270573b61289",
+        "https://agent.tinyfish.ai/runs/940e2811-f88d-4e52-9aa6-7a4c23ce7ece"
+      ],
       "workstream": "C",
       "blocker": {
-        "cause": "Cloud Console automation reached new-project creation but returned no confirmed project ID; follow-up task failed before starting.",
-        "retryCondition": "A working cloud-management route is verified OR the user supplies a confirmed project ID/billing choice. First perform read-only reconciliation; never blindly create again.",
-        "nextAction": "Verify project existence in resource manager before any further create/deploy operation.",
+        "cause": "Project tired-social-platform (Tired Social Platform) is confirmed. No billing account is linked. Enabling run.googleapis.com returned Billing required; no deployment endpoint is verified.",
+        "retryCondition": "Link a usable existing billing account to the confirmed project, then enable Cloud Run and verify deployment access. Do not create another project or retry Cloud Shell typing.",
+        "nextAction": "Finish inspecting available billing account choices and resolve linkage; then enable run.googleapis.com.",
         "attempts": [
           "Cloud Shell terminal input failed; no files executed.",
           "Cloud Shell editor save/input failed; no files saved.",
           "Repository source creation succeeded via GitHub API; do not retry browser editing.",
-          "Cloud Run setup run 3e1223a5-26ea-45b1-aaa1-33bd3e8c95ab ended without project confirmation."
+          "Cloud Run setup run 3e1223a5-26ea-45b1-aaa1-33bd3e8c95ab ended without project confirmation.",
+          "2026-11-16: project Settings confirmed ID and name; signed-in user has Owner (Legacy). Earlier generic permission warning was not reproduced on API detail page.",
+          "2026-11-16: Enable Cloud Run action returned Billing required. No API enablement or billing linkage completed."
         ]
       }
     },
@@ -291,6 +296,28 @@
       "acceptance": "Recovery, monitoring, security, accessibility and rollback verified before domain launch.",
       "evidence": [],
       "workstream": "R"
+    },
+    {
+      "id": "C03",
+      "title": "Connect tired.events through Cloudflare",
+      "status": "blocked",
+      "priority": 0,
+      "dependsOn": [
+        "C02"
+      ],
+      "acceptance": "Verified intended Google origin, hostname certificates and access model; apex/www route to the new app; HTTPS and rollback verified; existing mail/auth/API services preserved.",
+      "evidence": [
+        "https://agent.tinyfish.ai/runs/94f41e4b-e585-4913-a0b7-afefd58431e4"
+      ],
+      "workstream": "C",
+      "blocker": {
+        "cause": "Cloudflare access works and domain is selected, but no new application origin is deployed. Existing apex/www point to 136.110.237.35 DNS-only.",
+        "retryCondition": "C01 billing/API prerequisites and C02 deployment verification complete; exact destination DNS and origin TLS available.",
+        "nextAction": "Follow docs/CLOUDFLARE.md after staging is verified; reconcile existing api.tired.events Worker connection before any route change.",
+        "attempts": [
+          "Audited zone/DNS/TLS/rules; no DNS or settings writes made."
+        ]
+      }
     }
   ]
 }

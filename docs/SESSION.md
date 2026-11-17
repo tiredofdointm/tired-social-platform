@@ -3,7 +3,9 @@ Date: 2026-11-16
 
 ## Current outcome
 Independent source creation, React/TypeScript UI, database foundation and progress workflow are committed.
-U03 is complete. The next designated task is D03.
+U03 is complete. The user prioritized Cloudflare connection for tired.events.
+Domain audit and cutover configuration are prepared in docs/CLOUDFLARE.md.
+D03 remains the next independent implementation task while cloud billing blocks deployment.
 Authoritative task states: project/progress.json. Do not infer product completion from prototype milestones.
 
 ## Reviewed evidence
@@ -38,26 +40,34 @@ Database is NOT connected to the app or deployed in Google Cloud.
 No live OAuth, shared data, invitations, tickets, payments or payouts.
 No deployed Cloud Run URL verified. Rendered screenshots still need visual/accessibility review.
 
-## Cloud blocker — do not repeat blindly
-Existing cloud applications were left unchanged.
-Run 3e1223a5-26ea-45b1-aaa1-33bd3e8c95ab reached a new-project form named Tired Social Platform
-but returned no confirmed project ID. Its summary was ambiguous about whether Create was submitted.
-Follow-up reconciliation task failed to start; run history search returned no matching run.
-Therefore project creation is UNKNOWN, not complete and not definitely absent.
-Before any creation retry, reconcile project list/notifications read-only.
-Billing account and repository deployment integration remain unverified.
+## Cloud and domain checkpoint
+User selected tired.events. Cloudflare saved sign-in works.
+Audit: https://agent.tinyfish.ai/runs/94f41e4b-e585-4913-a0b7-afefd58431e4
+Apex/www currently use A 136.110.237.35, DNS-only, TTL 300.
+Full (strict) and active edge certificates observed. Email/auth/API dependencies exist.
+No domain settings or DNS records changed. Do not overwrite existing API/Worker routing.
 
-Failed routes: Cloud Shell terminal input; Cloud Shell editor save/input.
-Working route: direct GitHub source edits and GitHub Actions verification.
-Never return to the failed browser typing loops without evidence of a changed capability.
+Project creation is now reconciled: Tired Social Platform, ID tired-social-platform, exists.
+Settings/IAM audit: https://agent.tinyfish.ai/runs/5e7c0256-b6f7-4286-a0e9-270573b61289
+The signed-in user has Owner (Legacy). The project has no linked billing account.
+An earlier generic Cloud Run permission warning was not reproduced on API details.
+Attempting to enable run.googleapis.com returned Billing required; API remains disabled.
+Attempt: https://agent.tinyfish.ai/runs/940e2811-f88d-4e52-9aa6-7a4c23ce7ece
+No deployable service URL is verified. Disabled API pages alone do not prove absence of every service.
+Existing unrelated projects are untouched. Never create a duplicate project.
+Billing choices inspection: https://agent.tinyfish.ai/runs/3d46e89e-454a-4037-9475-c2c5b75730f1
+
+Working source route: GitHub API and Actions. Failed terminal/editor typing routes remain retired.
+Next cloud action: resolve billing linkage, enable required APIs, deploy tested revision,
+then verify origin/certificates/access before executing docs/CLOUDFLARE.md cutover.
 
 ## Next designated task
 D03 — implement parameterized PostgreSQL access and a versioned migration runner.
 Read the existing migration and BACKEND-CONTRACT.md, mark D03 in_progress, and verify migrations
 and data access against disposable PostgreSQL in CI. Never import browser demo data silently.
 U02 visual/accessibility inspection remains ready; screenshots exist but are not visually reviewed.
-Cloud task C01 remains blocked until a functioning management route or confirmed project/billing details
-allow read-only reconciliation. Do not let this prevent ready development work.
+Cloud task C01 remains blocked on billing linkage; project reconciliation is complete.
+C03 domain connection depends on a verified C02 deployment. Do not let this prevent ready development work.
 
 ## Continuity rules
 Read AGENTS.md, PLAN.md, progress.json and this file.
