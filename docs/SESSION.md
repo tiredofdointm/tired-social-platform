@@ -277,3 +277,8 @@ The event start is entered in the browser's local timezone and stored as UTC.
 Migration 003 adds the shared tables. Apply it before activating this build with
 the cloud database. Live Google login and authenticated staging access remain open.
 Next: review platform and database CI, then build configurable publishing and review.
+
+Database and platform CI passed for a8a4638cbd5a6e85f4ae6c9a3e5bc66954c30b63. PostgreSQL and two
+browser accounts verified RSVP persistence, single-seat concurrency and plan
+access before and after invitation acceptance. Next implement E02 publishing
+policy and organizer review controls. Staging still needs authenticated verification.
