@@ -24,7 +24,8 @@ export function createServer({auth=null,social=null} = {}) {
    res.writeHead(200, {'Content-Type':'application/json','Cache-Control':'no-store'});
    return res.end(req.method==='HEAD'?undefined:JSON.stringify({mode:'preview'}));
   }
-  if (path === '/healthz') {
+  // Cloud Run reserves some paths ending in z. Use /api/health for external probes.
+  if (path === '/api/health' || path === '/healthz') {
    res.writeHead(200, {'Content-Type':'application/json', 'Cache-Control':'no-store'});
    return res.end(req.method === 'HEAD' ? undefined : JSON.stringify({status:'ok', mode:auth?'auth-enabled-preview':'local-demo', version:'0.1.0', ...(process.env.K_REVISION?{revision:process.env.K_REVISION}:{})}));
   }
