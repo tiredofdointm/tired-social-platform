@@ -3,9 +3,9 @@
   "updated": "2026-11-16",
   "objective": "Independent Google Cloud social/events/talent platform; no Laravel; customizable UI and verified production journeys.",
   "currentSession": {
-    "primaryTask": "C02",
-    "nextTask": "C02",
-    "reason": "Build succeeded and console reports a ready service. Direct health URL returns 404; YAML/security reports conflict on IAM enforcement. Resolve using authoritative deployed configuration and authenticated smoke test before marking C02 done or changing DNS."
+    "primaryTask": "A01",
+    "nextTask": "A01",
+    "reason": "Implement Google login and secure server sessions while a focused cloud health diagnostic resolves C02. One primary code task."
   },
   "workInProgressLimit": 1,
   "tasks": [
@@ -170,7 +170,7 @@
     {
       "id": "C02",
       "title": "Authenticated Cloud Run staging",
-      "status": "verification",
+      "status": "blocked",
       "priority": 0,
       "dependsOn": [
         "C01"
@@ -181,14 +181,24 @@
         "https://agent.tinyfish.ai/runs/e9eb5fd0-e904-407d-97f6-3bad16cf5e4c",
         "https://agent.tinyfish.ai/runs/91c3e8f4-f1fe-4b28-b965-bb62930c22ce",
         "https://agent.tinyfish.ai/runs/92113744-aa8f-4840-833c-ec0f374a9689",
-        "https://agent.tinyfish.ai/runs/1dd1c110-9013-4f4b-905f-2cbeacce8146"
+        "https://agent.tinyfish.ai/runs/1dd1c110-9013-4f4b-905f-2cbeacce8146",
+        "https://agent.tinyfish.ai/runs/305f7104-4b46-478f-b424-43100aeaebe8"
       ],
-      "workstream": "C"
+      "workstream": "C",
+      "blocker": {
+        "cause": "Direct health returned Google404; browser configuration reports conflict. Focused Console test could not execute authenticated GET /healthz.",
+        "retryCondition": "Obtain actual authenticated health response and authoritative deployed settings, then resolve routing/auth discrepancy.",
+        "nextAction": "Use an authenticated cloud execution channel to retrieve actual service JSON/IAM and GET /healthz. Do not repeat the Console Test dialog or claim its unsupported missing-route diagnosis.",
+        "attempts": [
+          "Console healthy summary does not resolve direct404; YAML and Security reports conflict.",
+          "Console Test generated POST root only. Source already registers /healthz; no authenticated GET was executed and no change saved."
+        ]
+      }
     },
     {
       "id": "A01",
       "title": "Google identity and secure sessions",
-      "status": "ready",
+      "status": "verification",
       "priority": 1,
       "dependsOn": [
         "D03",

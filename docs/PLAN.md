@@ -31,7 +31,7 @@ Production proposal: React/TypeScript UI, Node/TypeScript API, Cloud Run,
 PostgreSQL on Cloud SQL, Cloud Storage uploads, Google sign-in,
 Stripe Connect, queued background tasks and structured logs.
 Implemented: strict TypeScript React components bundled with esbuild, served by Node's HTTP server.
-The runtime serves built assets without third-party server packages. Browser-local preview data
+The runtime serves built assets and optional Google authentication through server-only database/provider packages. Browser-local preview data
 retains the original storage format. Shared-account backend integration remains pending.
 
 ## Product rules

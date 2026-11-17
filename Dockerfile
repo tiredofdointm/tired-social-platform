@@ -9,7 +9,11 @@ RUN npm run build
 FROM node:22-alpine
 WORKDIR /app
 ENV NODE_ENV=production
-COPY --chown=node:node package.json server.mjs ./
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev --no-audit --no-fund
+COPY --chown=node:node server.mjs ./
+COPY --chown=node:node server ./server
+COPY --chown=node:node db ./db
 COPY --from=build --chown=node:node /app/dist ./dist
 USER node
 ENV PORT=8080

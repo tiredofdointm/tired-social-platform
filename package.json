@@ -10,7 +10,7 @@
   "scripts": {
     "start": "node server.mjs",
     "test": "node --test test/*.test.mjs",
-    "check": "tsc --noEmit && node --check server.mjs && node --check scripts/build.mjs && node --check db/migrate.mjs && node --check server/database.mjs && node --check server/social-repository.mjs",
+    "check": "tsc --noEmit && node --check server.mjs && node --check scripts/build.mjs && node --check db/migrate.mjs && node --check server/database.mjs && node --check server/social-repository.mjs && node --check server/auth.mjs",
     "test:browser": "node scripts/browser-check.mjs",
     "build": "node scripts/build.mjs",
     "pretest": "npm run build",
@@ -25,6 +25,7 @@
     "typescript": "5.9.3"
   },
   "dependencies": {
+    "google-auth-library": "11.3.4",
     "pg": "8.16.3",
     "react": "19.2.0",
     "react-dom": "19.2.0"

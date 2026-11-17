@@ -170,3 +170,26 @@ claiming live endpoint success. Do not create/delete/rename the existing service
 All browser runs listed above are completed; none should be polled as active.
 C03 DNS cutover remains pending. A01 login/shared data remains the next independent code task.
 This checkpoint-only commit uses [skip ci] to avoid redeploying identical app code.
+
+## Google identity implementation continuation
+A01 is now in verification; C02 is blocked. This supersedes earlier next-task/status lines.
+Added server Google OAuth flow (state/nonce/PKCE), secure hashed sessions, /me,
+logout Origin/CSRF enforcement, active-account checks and migration002. UI account
+controls are configuration-driven; sample workspace data remains local and separate.
+Docker now installs production dependencies and includes backend/migration files.
+See docs/AUTH.md for activation, security contract and test/live distinction.
+Local strict type/syntax, 8 unit/HTTP tests and 8 PostgreSQL18.6 tests passed.
+Browser/container and PostgreSQL16 CI evidence must be reviewed before completion.
+
+Cloud run305f7104-4b46-478f-b424-43100aeaebe8 completed without an authenticated
+GET /healthz. Its missing-app-route diagnosis is unsupported: server.mjs already
+has the route and automated HTTP tests pass. Console Test only generated POST root.
+No cloud configuration change was saved. Do not repeat that dialog approach.
+Cloud diagnosis now needs actual gcloud service JSON/IAM plus authenticated HTTP
+through an authenticated execution channel. No successful live endpoint is claimed.
+Health now includes the actual K_REVISION when set to support image/revision diagnosis.
+
+Next action: review A01 CI, record exact source/evidence, then wire the first shared
+social API journey (S01). Live activation is a separate gate: dedicated cloud DB,
+OAuth client/secrets/redirect, verified host/access model, two real Google accounts.
+No live Google credentials, database connection, DNS or payment changes were made.

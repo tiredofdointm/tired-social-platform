@@ -80,6 +80,18 @@ try {
  await page.setViewportSize({width:390,height:844});
  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),'No mobile horizontal overflow');
  await page.screenshot({path:'artifacts/mobile.png',fullPage:true});
+ // Account UI uses mocked HTTP only; real OAuth is covered separately and remains a deployment gate.
+ let signedIn=false;
+ await page.route('**/api/v1/auth/config',route=>route.fulfill({json:{mode:'google'}}));
+ await page.route('**/api/v1/me',route=>route.fulfill({status:signedIn?200:401,json:signedIn?{user:{display_name:'Test member'},csrfToken:'test-csrf'}:{error:{code:'authentication_required'}}}));
+ await page.route('**/auth/logout',route=>{assert.equal(route.request().headers()['x-csrf-token'],'test-csrf');signedIn=false;return route.fulfill({json:{signedOut:true}});});
+ await page.reload();
+ await page.getByRole('link',{name:'Sign in with Google'}).waitFor();
+ signedIn=true;await page.reload();
+ await page.getByText('Signed in: Test member',{exact:true}).waitFor();
+ assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),'Account controls fit mobile');
+ await page.getByRole('button',{name:'Sign out',exact:true}).click();
+ await page.getByRole('link',{name:'Sign in with Google'}).waitFor();
  assert.deepEqual(errors,[]);
  console.log('Browser journeys passed: legacy storage, post/comment/plan persistence, service listing, draft preservation, dialog Escape, escaped content, RSVP, theme, approval, booking draft, mobile layout.');
 } finally {if(browser)await browser.close();await new Promise(r=>server.close(r));}
