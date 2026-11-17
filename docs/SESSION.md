@@ -6,7 +6,8 @@ Independent source creation, React/TypeScript UI, database foundation and progre
 U03 is complete. The user prioritized Cloudflare connection for tired.events.
 Domain audit and cutover configuration are prepared in docs/CLOUDFLARE.md.
 D03 is complete and verified. C01 billing/API prerequisites are now verified.
-User prioritized deployment; C02 is blocked on GitHub browser sign-in. A01 remains the next independent application task.
+User prioritized deployment; C02 is in verification. GitHub sign-in and repository connection are complete.
+A01 remains the next independent application task.
 Authoritative task states: project/progress.json. Do not infer product completion from prototype milestones.
 
 ## Reviewed evidence
@@ -117,3 +118,55 @@ No service was created. User must sign into GitHub and save the browser profile,
 resume Cloud Run repository authorization. This is separate from the working GitHub API connection.
 Do not repeat billing checks or Cloud Shell typing. No live OAuth URL/state is persisted here.
 Cloud Build configuration now uses npm ci and explicitly enables nested image substitutions.
+
+## GitHub connection continuation
+GitHub sign-in now works. Google Cloud Build GitHub App installed with access only to
+tiredofdointm/tired-social-platform; source selection and Dockerfile configuration completed.
+Evidence: https://agent.tinyfish.ai/runs/ddb44cc2-247a-4a94-8602-650c48509254
+That run stopped before submission because Require authentication was not selected.
+This is a form-completion task, not a missing permission or a reason to ask the user again.
+No build or service was created in that run. Its expected URL is not deployment evidence.
+Use 512 MiB memory for the selected second-generation runtime, 1 CPU, min0/max2.
+Follow-up run: https://agent.tinyfish.ai/runs/fdb4506d-4a28-4534-bd90-bd864e7fd6bd
+Poll the existing follow-up before starting any new deployment.
+
+## Latest deployment evidence — authoritative continuation
+Cloud Build GitHub App is installed only for tiredofdointm/tired-social-platform.
+Successful build 1f0039a1-3a75-4cc8-870c-d7a71e79c0dc used main commit
+0337c558dec14ea05a549b642b455704c7069c23.
+Build evidence: https://agent.tinyfish.ai/runs/e9eb5fd0-e904-407d-97f6-3bad16cf5e4c
+Trigger name: rmgpgab-tired-social-staging-us-west1-tiredofdointm-tired-soheq.
+
+Service inspection reports healthy/serving for tired-social-staging in us-west1:
+https://agent.tinyfish.ai/runs/91c3e8f4-f1fe-4b28-b965-bb62930c22ce
+Reported URL: https://tired-social-staging-1081107677856.us-west1.run.app
+Trigger ID reported: 46c84a77-dc13-461e-b928-084bf7dfccdc.
+Ready revision, traffic, source-image linkage, IAM and deployed scaling were NOT verified.
+A separate local HTTP GET to the reported URL's /healthz returned Google's HTTP 404 page.
+Do not claim a working endpoint or mark C02 done from the healthy-console summary alone.
+
+The deployment run fdb4506d-4a28-4534-bd90-bd864e7fd6bd ended on a new-service form
+with name conflict. Do not follow its suggestion to delete or rename: use the existing service.
+Configured form values are NOT proof of deployed settings.
+Target remains IAM auth, request-based billing, 1 CPU, 512MiB, min0/max2.
+Read-only actual YAML verification run: 92113744-aa8f-4840-833c-ec0f374a9689.
+No DNS changes. No live user login/shared database/payment functionality added.
+
+## Verification result and unresolved discrepancy
+YAML inspection run 92113744-aa8f-4840-833c-ec0f374a9689 reports:
+- ready revision tired-social-staging-00001-wrl, 100% traffic
+- image gcr.io/tired-social-platform/tired-social-staging:sha-0337c558dec14ea05a549b642b455704c7069c23
+- CPU 1000m, memory512Mi, min0, revision max10, service max2, ingress all
+- invoker-iam-disabled=true (would disable IAM checks)
+These are browser-agent reports, not independently downloaded YAML.
+A follow-up Security inspection (1dd1c110-9013-4f4b-905f-2cbeacce8146) instead reports
+Require authentication selected, IAM checked, IAP unchecked, and No changes made.
+It could not confirm the YAML annotation or allUsers bindings, and did not run an authenticated
+health test. No saved authentication correction is confirmed. Treat enforcement as unresolved.
+
+C02 remains in verification, not done. Next bounded task: inspect authoritative deployed service
+configuration/IAM and perform authenticated GET /healthz. Resolve reported URL's 404 before
+claiming live endpoint success. Do not create/delete/rename the existing service.
+All browser runs listed above are completed; none should be polled as active.
+C03 DNS cutover remains pending. A01 login/shared data remains the next independent code task.
+This checkpoint-only commit uses [skip ci] to avoid redeploying identical app code.

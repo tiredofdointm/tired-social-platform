@@ -3,9 +3,9 @@
   "updated": "2026-11-16",
   "objective": "Independent Google Cloud social/events/talent platform; no Laravel; customizable UI and verified production journeys.",
   "currentSession": {
-    "primaryTask": null,
-    "nextTask": "A01",
-    "reason": "C01 billing/API prerequisite complete. C02 awaits GitHub browser sign-in to authorize the repository connection; A01 is ready independently."
+    "primaryTask": "C02",
+    "nextTask": "C02",
+    "reason": "Build succeeded and console reports a ready service. Direct health URL returns 404; YAML/security reports conflict on IAM enforcement. Resolve using authoritative deployed configuration and authenticated smoke test before marking C02 done or changing DNS."
   },
   "workInProgressLimit": 1,
   "tasks": [
@@ -170,24 +170,20 @@
     {
       "id": "C02",
       "title": "Authenticated Cloud Run staging",
-      "status": "blocked",
+      "status": "verification",
       "priority": 0,
       "dependsOn": [
         "C01"
       ],
       "acceptance": "Service ready, authenticated URL and revision match verified commit; min0/max2.",
       "evidence": [
-        "https://agent.tinyfish.ai/runs/d81cb122-4b1e-49a5-a2a3-34a197a0b4bc"
+        "https://agent.tinyfish.ai/runs/ddb44cc2-247a-4a94-8602-650c48509254",
+        "https://agent.tinyfish.ai/runs/e9eb5fd0-e904-407d-97f6-3bad16cf5e4c",
+        "https://agent.tinyfish.ai/runs/91c3e8f4-f1fe-4b28-b965-bb62930c22ce",
+        "https://agent.tinyfish.ai/runs/92113744-aa8f-4840-833c-ec0f374a9689",
+        "https://agent.tinyfish.ai/runs/1dd1c110-9013-4f4b-905f-2cbeacce8146"
       ],
-      "workstream": "C",
-      "blocker": {
-        "cause": "Cloud Run repository setup reaches GitHub OAuth login; automation browser has no GitHub sign-in. No service created. Billing and required APIs are verified.",
-        "retryCondition": "User signs into GitHub in the saved browser profile and saves it, then complete Cloud Build authorization scoped to tiredofdointm/tired-social-platform.",
-        "nextAction": "Resume Cloud Run Connect repository after GitHub profile sign-in. Deploy main with root Dockerfile, authenticated, us-west1, min0/max2.",
-        "attempts": [
-          "Reached Cloud Run Set up with Cloud Build and Authenticate GitHub; stopped at GitHub login."
-        ]
-      }
+      "workstream": "C"
     },
     {
       "id": "A01",
@@ -315,8 +311,8 @@
       ],
       "workstream": "C",
       "blocker": {
-        "cause": "Cloudflare access works and domain is selected, but no new application origin is deployed. Existing apex/www point to 136.110.237.35 DNS-only.",
-        "retryCondition": "C01 billing/API prerequisites and C02 deployment verification complete; exact destination DNS and origin TLS available.",
+        "cause": "Cloudflare domain audited and staging service exists, but deployed authentication and health response are not verified; reported endpoint returned 404. DNS still points to existing origin.",
+        "retryCondition": "Complete C02: verify deployed source/revision, authentication and successful health request; select custom-domain frontend and validate origin TLS/access model.",
         "nextAction": "Follow docs/CLOUDFLARE.md after staging is verified; reconcile existing api.tired.events Worker connection before any route change.",
         "attempts": [
           "Audited zone/DNS/TLS/rules; no DNS or settings writes made."

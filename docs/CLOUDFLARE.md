@@ -69,3 +69,9 @@ Evidence: https://agent.tinyfish.ai/runs/cded7627-0fde-48b2-a4bb-637ea97a8ee4
 Staging reached Cloud Build GitHub authorization but stopped at GitHub login.
 No service was created; origin and DNS cutover remain unverified.
 Evidence: https://agent.tinyfish.ai/runs/d81cb122-4b1e-49a5-a2a3-34a197a0b4bc
+
+## Staging verification update
+GitHub authorization is now complete and a Cloud Build succeeded. The console inspection
+reports an existing healthy tired-social-staging service, but direct /healthz on its reported
+URL returned HTTP 404. Actual service YAML, revision, routing, authentication and instance
+limits must be verified before using it as a domain origin. DNS remains unchanged.
