@@ -5,7 +5,7 @@
   "currentSession": {
     "primaryTask": "E02",
     "nextTask": "E02",
-    "reason": "Shared service publishing is implemented. Verify migration 005 and the signed-in directory before release."
+    "reason": "PostgreSQL, browser and platform CI passed for shared service publishing. Apply migration 005 before promoting the candidate."
   },
   "workInProgressLimit": 1,
   "tasks": [
@@ -253,7 +253,10 @@
         "E01"
       ],
       "acceptance": "Automatic default and manual review work for events/services; only authorized admin changes policy.",
-      "evidence": [],
+      "evidence": [
+        "https://github.com/tiredofdointm/tired-social-platform/actions/runs/44201179510",
+        "https://github.com/tiredofdointm/tired-social-platform/actions/runs/44201179533"
+      ],
       "workstream": "E"
     },
     {
