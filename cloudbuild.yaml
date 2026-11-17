@@ -1,7 +1,7 @@
 steps:
   - name: 'node:22-alpine'
     entrypoint: npm
-    args: ['install', '--no-audit', '--no-fund']
+    args: ['ci', '--no-audit', '--no-fund']
   - name: 'node:22-alpine'
     entrypoint: npm
     args: ['run', 'check']
@@ -15,4 +15,5 @@ images:
 substitutions:
   _IMAGE: 'us-west1-docker.pkg.dev/$PROJECT_ID/tired-social/app:latest'
 options:
+  dynamicSubstitutions: true
   logging: CLOUD_LOGGING_ONLY

@@ -5,7 +5,8 @@ Date: 2026-11-16
 Independent source creation, React/TypeScript UI, database foundation and progress workflow are committed.
 U03 is complete. The user prioritized Cloudflare connection for tired.events.
 Domain audit and cutover configuration are prepared in docs/CLOUDFLARE.md.
-D03 is complete and verified. A01 is the next implementation task while cloud billing blocks deployment.
+D03 is complete and verified. C01 billing/API prerequisites are now verified.
+User prioritized deployment; C02 is blocked on GitHub browser sign-in. A01 remains the next independent application task.
 Authoritative task states: project/progress.json. Do not infer product completion from prototype milestones.
 
 ## Reviewed evidence
@@ -40,7 +41,7 @@ Database is NOT connected to the app or deployed in Google Cloud.
 No live OAuth, shared data, invitations, tickets, payments or payouts.
 No deployed Cloud Run URL verified. Rendered screenshots still need visual/accessibility review.
 
-## Cloud and domain checkpoint
+## Historical cloud and domain checkpoint (superseded by latest cloud continuation below)
 User selected tired.events. Cloudflare saved sign-in works.
 Audit: https://agent.tinyfish.ai/runs/94f41e4b-e585-4913-a0b7-afefd58431e4
 Apex/www currently use A 136.110.237.35, DNS-only, TTL 300.
@@ -81,7 +82,7 @@ Local checks also passed using PostgreSQL 18.6 (7 Node database tests plus origi
 Migration 001 is byte-for-byte preserved; no demo import, HTTP API, or live DB connection added.
 The backend repository and migration runner are internal modules; the public app remains a local preview.
 U02 visual/accessibility inspection remains ready; screenshots exist but are not visually reviewed.
-Cloud task C01 remains blocked on billing linkage; project reconciliation is complete.
+Cloud task C01 is complete; C02 awaits GitHub browser sign-in.
 C03 domain connection depends on a verified C02 deployment. Do not let this prevent ready development work.
 
 ## Continuity rules
@@ -90,9 +91,29 @@ Use workflow summary for ready tasks. Validate tracker with node scripts/progres
 No percentage-of-product claims. Done requires reviewed acceptance evidence.
 CI reports priorities; it does not autonomously implement backlog work or verify external evidence links.
 
-## Latest continuation
+## Prior continuation
 Local git clone and command execution now work; GitHub source remains authoritative.
 Billing recheck: https://agent.tinyfish.ai/runs/3fd01e61-b284-4295-add5-6a5bd43ab413
 Confirmed no billing linkage and Cloud Run API disabled. The report inferred a closed account
 from linkage status, so it does not independently reconfirm account status or IAM privileges.
 No cloud/DNS changes made. Prior closed-account evidence remains the last direct selector audit.
+
+## Latest cloud continuation
+User reported linked billing and authorized continuing deployment.
+Completed console inspection: https://agent.tinyfish.ai/runs/cded7627-0fde-48b2-a4bb-637ea97a8ee4
+The inspection reports active linked billing and Cloud Run, Cloud Build, and Artifact Registry enabled.
+Do not repeat the closed-billing blocker. Project number was not obtained.
+Its claim of no services based on zero cost is not proof; inspect the actual services table.
+The unrelated API inventory and hypothetical deployment instructions are not implementation evidence.
+
+Completed deployment attempt: https://agent.tinyfish.ai/runs/d81cb122-4b1e-49a5-a2a3-34a197a0b4bc
+Target: tired-social-staging, us-west1, authenticated access, request-based billing, min0/max2.
+Source: tiredofdointm/tired-social-platform main, Dockerfile at repository root.
+Last verified application source: 288591aa0a4b17a0b45e6b4cd6c450705071eb51;
+checkpoint revision: c84485fd94e5de0b268330adcd25f5b91f75454b.
+No service URL or deployment success verified yet. No DNS changes.
+The run completed at GitHub OAuth login: no GitHub sign-in in the automation profile.
+No service was created. User must sign into GitHub and save the browser profile, then
+resume Cloud Run repository authorization. This is separate from the working GitHub API connection.
+Do not repeat billing checks or Cloud Shell typing. No live OAuth URL/state is persisted here.
+Cloud Build configuration now uses npm ci and explicitly enables nested image substitutions.

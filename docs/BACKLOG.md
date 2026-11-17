@@ -12,9 +12,11 @@ It validates dependencies, task states, evidence fields, retry gates and a one-t
 - Complete: dependency-aware progress tracking workflow (verified in GitHub Actions).
 - Complete: React/TypeScript migration with preserved browser-local journeys.
 - Complete: server data-access layer and migration runner; PostgreSQL 16 CI passed.
-- Next: Google identity and secure sessions (A01).
+- Cloud Run staging (C02) is blocked at GitHub browser sign-in for Cloud Build repository authorization.
+- Next independent application task: Google identity and secure sessions (A01).
 - Ready: rendered UI/accessibility review.
-- Blocked: cloud project/deployment access, pending active billing linkage; project ID tired-social-platform is confirmed.
+- Complete: cloud project identity, active billing linkage, and required API verification (C01).
+- Pending: verified staging service and subsequent domain connection.
 - Not implemented: live identity, shared social APIs, production events/plans,
   ticket sales, provider payouts and launch.
 

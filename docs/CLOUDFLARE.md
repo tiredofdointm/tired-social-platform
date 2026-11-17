@@ -51,13 +51,21 @@ Do not enable HSTS preload or includeSubDomains before all existing subdomains a
 - https://developers.cloudflare.com/ssl/origin-configuration/ssl-modes/full-strict/
 - https://developers.cloudflare.com/cache/how-to/cache-rules/settings/
 
-## Confirmed Google prerequisite
+## Previous Google prerequisite check (historical)
 Project ID tired-social-platform, display name Tired Social Platform. Settings and IAM show an owner role.
 The project has no billing account linked. Attempting to enable Cloud Run returned Billing required.
 The earlier generic permission warning does not establish missing IAM rights. No deployable endpoint is verified.
 API attempt: https://agent.tinyfish.ai/runs/940e2811-f88d-4e52-9aa6-7a4c23ce7ece
 
-## Billing selector result
+## Previous billing selector result (historical)
 The only displayed account, My Billing Account, is closed. A costs-view permission warning was also shown.
 No billing linkage was submitted. A billing administrator must reopen it or provide an active account.
 Evidence: https://agent.tinyfish.ai/runs/3d46e89e-454a-4037-9475-c2c5b75730f1
+
+## Billing prerequisite cleared
+Latest inspection reports billing active and linked to tired-social-platform.
+Cloud Run, Cloud Build and Artifact Registry APIs are enabled.
+Evidence: https://agent.tinyfish.ai/runs/cded7627-0fde-48b2-a4bb-637ea97a8ee4
+Staging reached Cloud Build GitHub authorization but stopped at GitHub login.
+No service was created; origin and DNS cutover remain unverified.
+Evidence: https://agent.tinyfish.ai/runs/d81cb122-4b1e-49a5-a2a3-34a197a0b4bc
