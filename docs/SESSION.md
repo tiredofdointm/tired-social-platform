@@ -5,7 +5,7 @@ Date: 2026-11-16
 Independent source creation, React/TypeScript UI, database foundation and progress workflow are committed.
 U03 is complete. The user prioritized Cloudflare connection for tired.events.
 Domain audit and cutover configuration are prepared in docs/CLOUDFLARE.md.
-D03 is implemented and in verification while cloud billing blocks deployment.
+D03 is complete and verified. A01 is the next implementation task while cloud billing blocks deployment.
 Authoritative task states: project/progress.json. Do not infer product completion from prototype milestones.
 
 ## Reviewed evidence
@@ -64,12 +64,22 @@ Next cloud action: resolve billing linkage, enable required APIs, deploy tested 
 then verify origin/certificates/access before executing docs/CLOUDFLARE.md cutover.
 
 ## Next designated task
-D03 — review committed CI results for migration runner and server repository.
-Local strict TypeScript, 6 unit/HTTP tests, browser journeys, 7 database tests on PostgreSQL 18.6,
-and existing SQL constraint tests passed. CI checks PostgreSQL 16.
-Migration 001 is byte-for-byte preserved; no demo import, HTTP API, or live DB connection added.
-After CI passes, mark D03 done and designate A01 Google identity and secure sessions.
+A01 — implement Google identity and secure sessions.
 Use server-only actor identities when wiring repository methods to future routes.
+Implement state/nonce/PKCE validation, server sessions stored as token hashes, expiration,
+logout revocation, CSRF protection and two-account authorization tests. Keep local preview
+explicit and do not import demo data. Live Google login needs configured OAuth credentials
+and an approved redirect URL; do not claim it works from mocked provider tests alone.
+
+D03 source revision: 288591aa0a4b17a0b45e6b4cd6c450705071eb51.
+Reviewed CI: PostgreSQL 16 migrations, replay and data access/SQL constraint checks passed:
+https://github.com/tiredofdointm/tired-social-platform/actions/runs/44000350589
+Strict TypeScript, unit/HTTP, browser journeys and Docker build passed:
+https://github.com/tiredofdointm/tired-social-platform/actions/runs/44000350603
+Progress graph passed: https://github.com/tiredofdointm/tired-social-platform/actions/runs/44000350886
+Local checks also passed using PostgreSQL 18.6 (7 Node database tests plus original SQL suite).
+Migration 001 is byte-for-byte preserved; no demo import, HTTP API, or live DB connection added.
+The backend repository and migration runner are internal modules; the public app remains a local preview.
 U02 visual/accessibility inspection remains ready; screenshots exist but are not visually reviewed.
 Cloud task C01 remains blocked on billing linkage; project reconciliation is complete.
 C03 domain connection depends on a verified C02 deployment. Do not let this prevent ready development work.
