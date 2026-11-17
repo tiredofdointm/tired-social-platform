@@ -245,3 +245,26 @@ See docs/SHARED-SOCIAL.md for API scope, limits and production prerequisites.
 Next action: review platform and database CI for this implementation, then record
 S01 evidence and designate E01 shared events/private plans. Cloud C02/A02 remain
 blocked; no additional cloud configuration or DNS changes were made in this slice.
+
+## Shared community verified checkpoint — authoritative current state
+S01 is complete as an implementation milestone, not a live cloud activation claim.
+Source4ea555d4b65a99ccd05ae3b0d16184a54ac17765 is committed and verified.
+PostgreSQL16, migrations/replay, SQL constraints, authorization HTTP tests and real
+server/database two-browser journeys all passed:
+https://github.com/tiredofdointm/tired-social-platform/actions/runs/44048520814
+Type/syntax, unit/HTTP, existing browser journeys, Docker build and running-container
+health response all passed:
+https://github.com/tiredofdointm/tired-social-platform/actions/runs/44048520765
+Progress graph passed:
+https://github.com/tiredofdointm/tired-social-platform/actions/runs/44048520844
+Local equivalent checks passed on PostgreSQL18.6. Reviewed community desktop/mobile
+screenshots; new account-backed page fits mobile and separates preview actions.
+No credentials or demo records were imported. No DNS/cloud settings changed here.
+
+Exact next action: E01 — add versioned schema and server permissions for shared events,
+RSVPs and private friend-plan membership, then wire account-backed UI and verify two
+accounts, nonmember isolation and persistence. Preserve existing preview sections
+until the corresponding shared journeys are implemented and verified.
+C02 authenticated cloud health/routing and A02 real Google/database activation remain
+blocked on the documented prerequisites. C03 DNS cutover stays gated. No background
+implementation is running after this checkpoint. Use [skip ci] for this docs-only save.
