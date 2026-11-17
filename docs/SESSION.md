@@ -5,7 +5,7 @@ Date: 2026-11-16
 Independent source creation, React/TypeScript UI, database foundation and progress workflow are committed.
 U03 is complete. The user prioritized Cloudflare connection for tired.events.
 Domain audit and cutover configuration are prepared in docs/CLOUDFLARE.md.
-D03 remains the next independent implementation task while cloud billing blocks deployment.
+D03 is implemented and in verification while cloud billing blocks deployment.
 Authoritative task states: project/progress.json. Do not infer product completion from prototype milestones.
 
 ## Reviewed evidence
@@ -64,9 +64,12 @@ Next cloud action: resolve billing linkage, enable required APIs, deploy tested 
 then verify origin/certificates/access before executing docs/CLOUDFLARE.md cutover.
 
 ## Next designated task
-D03 — implement parameterized PostgreSQL access and a versioned migration runner.
-Read the existing migration and BACKEND-CONTRACT.md, mark D03 in_progress, and verify migrations
-and data access against disposable PostgreSQL in CI. Never import browser demo data silently.
+D03 — review committed CI results for migration runner and server repository.
+Local strict TypeScript, 6 unit/HTTP tests, browser journeys, 7 database tests on PostgreSQL 18.6,
+and existing SQL constraint tests passed. CI checks PostgreSQL 16.
+Migration 001 is byte-for-byte preserved; no demo import, HTTP API, or live DB connection added.
+After CI passes, mark D03 done and designate A01 Google identity and secure sessions.
+Use server-only actor identities when wiring repository methods to future routes.
 U02 visual/accessibility inspection remains ready; screenshots exist but are not visually reviewed.
 Cloud task C01 remains blocked on billing linkage; project reconciliation is complete.
 C03 domain connection depends on a verified C02 deployment. Do not let this prevent ready development work.
@@ -76,3 +79,10 @@ Read AGENTS.md, PLAN.md, progress.json and this file.
 Use workflow summary for ready tasks. Validate tracker with node scripts/progress.mjs.
 No percentage-of-product claims. Done requires reviewed acceptance evidence.
 CI reports priorities; it does not autonomously implement backlog work or verify external evidence links.
+
+## Latest continuation
+Local git clone and command execution now work; GitHub source remains authoritative.
+Billing recheck: https://agent.tinyfish.ai/runs/3fd01e61-b284-4295-add5-6a5bd43ab413
+Confirmed no billing linkage and Cloud Run API disabled. The report inferred a closed account
+from linkage status, so it does not independently reconfirm account status or IAM privileges.
+No cloud/DNS changes made. Prior closed-account evidence remains the last direct selector audit.

@@ -3,10 +3,16 @@ on:
   push:
     paths:
       - 'db/**'
+      - 'server/**'
+      - 'test/database/**'
+      - 'package*.json'
       - '.github/workflows/database.yml'
   pull_request:
     paths:
       - 'db/**'
+      - 'server/**'
+      - 'test/database/**'
+      - 'package*.json'
       - '.github/workflows/database.yml'
   workflow_dispatch:
 permissions:
@@ -37,7 +43,17 @@ jobs:
       PGDATABASE: platform_test
     steps:
       - uses: actions/checkout@v4
-      - name: Apply migration
-        run: psql -v ON_ERROR_STOP=1 -f db/migrations/001_identity_social.sql
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --no-audit --no-fund
+      - name: Test migration runner and data access
+        run: npm run test:database
+        env:
+          TEST_DATABASE_URL: postgres://platform_test:ephemeral_ci_only@localhost:5432/platform_test
+      - name: Verify migration replay
+        run: npm run db:migrate
+        env:
+          DATABASE_URL: postgres://platform_test:ephemeral_ci_only@localhost:5432/platform_test
       - name: Test data and visibility constraints
         run: psql -v ON_ERROR_STOP=1 -f db/tests/identity_social.sql
