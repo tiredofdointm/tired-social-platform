@@ -1,11 +1,11 @@
 {
   "version": 1,
-  "updated": "2026-11-16",
+  "updated": "2026-11-17",
   "objective": "Independent Google Cloud social/events/talent platform; no Laravel; customizable UI and verified production journeys.",
   "currentSession": {
-    "primaryTask": "A01",
-    "nextTask": "A01",
-    "reason": "Implement Google login and secure server sessions while a focused cloud health diagnostic resolves C02. One primary code task."
+    "primaryTask": null,
+    "nextTask": "S01",
+    "reason": "A01 server implementation verified; proceed with shared social APIs. C02 cloud access and A02 live identity activation remain separate blocked gates."
   },
   "workInProgressLimit": 1,
   "tasks": [
@@ -197,21 +197,25 @@
     },
     {
       "id": "A01",
-      "title": "Google identity and secure sessions",
-      "status": "verification",
+      "title": "Server Google identity and secure sessions",
+      "status": "done",
       "priority": 1,
       "dependsOn": [
         "D03",
         "U03"
       ],
       "acceptance": "OAuth/session validation and two-account authorization tests pass; logout revokes access.",
-      "evidence": [],
+      "evidence": [
+        "https://github.com/tiredofdointm/tired-social-platform/commit/9765bc8a78dcf5b0941d59c4b8d3d02835961ba9",
+        "https://github.com/tiredofdointm/tired-social-platform/actions/runs/44045152994",
+        "https://github.com/tiredofdointm/tired-social-platform/actions/runs/44045520392"
+      ],
       "workstream": "A"
     },
     {
       "id": "S01",
       "title": "First shared social journey",
-      "status": "backlog",
+      "status": "ready",
       "priority": 1,
       "dependsOn": [
         "A01"
@@ -326,6 +330,27 @@
         "nextAction": "Follow docs/CLOUDFLARE.md after staging is verified; reconcile existing api.tired.events Worker connection before any route change.",
         "attempts": [
           "Audited zone/DNS/TLS/rules; no DNS or settings writes made."
+        ]
+      }
+    },
+    {
+      "id": "A02",
+      "title": "Activate and verify live Google identity",
+      "status": "blocked",
+      "priority": 1,
+      "dependsOn": [
+        "A01",
+        "C02"
+      ],
+      "acceptance": "Dedicated cloud database and OAuth client configured; two real Google accounts sign in over HTTPS and logout revokes access.",
+      "evidence": [],
+      "workstream": "A",
+      "blocker": {
+        "cause": "Cloud endpoint access unresolved; dedicated deployed database and OAuth credentials/redirect not configured.",
+        "retryCondition": "Verified HTTPS origin/access model and authenticated cloud configuration channel available.",
+        "nextAction": "Provision dedicated database, apply migrations, configure Secret Manager and OAuth redirect, then execute real two-account login checks from docs/AUTH.md.",
+        "attempts": [
+          "Local signed-JWT, database and browser tests passed; these do not prove live Google authentication."
         ]
       }
     }

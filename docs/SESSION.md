@@ -193,3 +193,39 @@ Next action: review A01 CI, record exact source/evidence, then wire the first sh
 social API journey (S01). Live activation is a separate gate: dedicated cloud DB,
 OAuth client/secrets/redirect, verified host/access model, two real Google accounts.
 No live Google credentials, database connection, DNS or payment changes were made.
+
+## Verified authentication checkpoint — current
+A01 server implementation is complete; live activation is tracked separately as A02.
+S01 is the next ready task. C02 and C03 remain blocked. No work is running unattended.
+Source: 9765bc8a78dcf5b0941d59c4b8d3d02835961ba9.
+Final code/test revision: 223f0bf21d371bb5cbdb9cd22ad0c92635812301.
+PostgreSQL16 migration/replay/social/session tests passed:
+https://github.com/tiredofdointm/tired-social-platform/actions/runs/44045152994
+Type/syntax, 8 unit/HTTP tests, browser journeys including account UI, Docker build
+and actual container GET /healthz with revision assertion all passed:
+https://github.com/tiredofdointm/tired-social-platform/actions/runs/44045520392
+Local PostgreSQL18.6 and Chromium checks also passed.
+Initial CI uncovered an ambiguous existing comment locator; scoped it to the exact
+post. The new container probe initially raced startup; added bounded error retries.
+Both fixes are verified in the final platform run. No application bypass was needed.
+
+GitHub Cloud Build check-run evidence for source9765bc8 reports build/push/deploy
+SUCCESS for staging build00ead8e9-dbe8-48e2-803e-2b18eb507bcd.
+It also reveals a second existing trigger in this same project:
+rmgpgab-tired-social-platform-europe-west1-tiredofdointm-tiraks,
+trigger690c113f-a6ad-4ca4-a694-d8e93388ca0e, build796d19e8-abc7-48ca-b64e-3911ffff4dd6.
+Both react to repository pushes; their intended ownership/target relationship needs
+reconciliation before future cloud changes. Neither was deleted or disabled.
+The reported staging URL still returned Google404 after deployment success.
+Authenticated live health, deployed enforcement and current revision remain unverified.
+
+Next build action: implement S01 with authenticated server actors, bounded input,
+CSRF-protected mutations and two-account privacy/ownership tests. Preserve the
+explicit preview until shared API flows are wired and verified. In parallel only
+when an authenticated execution channel is available, obtain authoritative Cloud
+Run service JSON/IAM and authenticated GET health. Avoid the failed Console Test
+dialog route, duplicate services, and DNS cutover while C02 is unresolved.
+This documentation-only checkpoint uses [skip ci] to avoid redundant deployments.
+
+Latest checked cloud source223f0bf also passed both Cloud Build checks: staging
+d891daf5-5fff-4be6-a5b3-b40215b6d0ca and europe116bd49e-c7ad-4f75-84dc-c38b50fd5d13.
