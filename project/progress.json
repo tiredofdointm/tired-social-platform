@@ -3,9 +3,9 @@
   "updated": "2026-11-17",
   "objective": "Independent Google Cloud social/events/talent platform; no Laravel; customizable UI and verified production journeys.",
   "currentSession": {
-    "primaryTask": null,
+    "primaryTask": "E01",
     "nextTask": "E01",
-    "reason": "S01 shared community implementation verified with PostgreSQL16 and two real browser contexts. Next implement shared events and private friend plans; live cloud and OAuth activation remain blocked separately."
+    "reason": "Shared events and plans implemented. Review CI for RSVP capacity and private membership."
   },
   "workInProgressLimit": 1,
   "tasks": [
@@ -231,7 +231,7 @@
     {
       "id": "E01",
       "title": "Shared events and private friend plans",
-      "status": "ready",
+      "status": "verification",
       "priority": 1,
       "dependsOn": [
         "S01"

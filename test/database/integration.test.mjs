@@ -23,35 +23,36 @@ test('migration runner and parameterized social access', async t => {
   const initial = await readFile(new URL('../../db/migrations/001_identity_social.sql', import.meta.url), 'utf8');
   await writeFile(new URL('001_identity_social.sql', url), initial);
   await writeFile(new URL('002_oauth_attempts.sql', url), await readFile(new URL('../../db/migrations/002_oauth_attempts.sql', import.meta.url)));
+  await writeFile(new URL('003_events_plans.sql', url), await readFile(new URL('../../db/migrations/003_events_plans.sql', import.meta.url)));
 
   await t.test('concurrent release jobs apply each migration once; repeat is a no-op', async () => {
     const results = await Promise.all([migrate(pool), migrate(pool)]);
-    assert.deepEqual(results.map(r => r.applied.length).sort(), [0, 2]);
-    assert.deepEqual(await migrate(pool), { applied: [], currentVersion: 2 });
+    assert.deepEqual(results.map(r => r.applied.length).sort(), [0, 3]);
+    assert.deepEqual(await migrate(pool), { applied: [], currentVersion: 3 });
     assert.equal((await pool.query('SELECT count(*)::int AS n FROM users')).rows[0].n, 0);
   });
   await t.test('changed, unknown and inconsistent versions fail closed', async () => {
     await writeFile(new URL('001_identity_social.sql', url), '-- changed\n' + initial);
     await assert.rejects(migrate(pool, { directory: url }), /history mismatch/);
     await writeFile(new URL('001_identity_social.sql', url), initial);
-    await pool.query("INSERT INTO app_migration_history(version,name,checksum) VALUES(3,'unknown','unknown')");
+    await pool.query("INSERT INTO app_migration_history(version,name,checksum) VALUES(4,'unknown','unknown')");
     await assert.rejects(migrate(pool), /history mismatch/);
-    await pool.query('DELETE FROM app_migration_history WHERE version=3');
+    await pool.query('DELETE FROM app_migration_history WHERE version=4');
     await pool.query('INSERT INTO schema_migrations(version) VALUES(7)');
     await assert.rejects(migrate(pool), /ledger mismatch/);
     await pool.query('DELETE FROM schema_migrations WHERE version=7');
   });
   await t.test('failed DDL rolls back with its version; a corrected new migration can retry', async () => {
-    await writeFile(new URL('003_test.sql', url), 'BEGIN;\nCREATE TABLE rollback_probe(id integer);\nSELECT 1/0;\nCOMMIT;\n');
+    await writeFile(new URL('004_test.sql', url), 'BEGIN;\nCREATE TABLE rollback_probe(id integer);\nSELECT 1/0;\nCOMMIT;\n');
     await assert.rejects(migrate(pool, { directory: url }));
     assert.equal((await pool.query("SELECT to_regclass('public.rollback_probe') AS t")).rows[0].t, null);
-    assert.equal((await pool.query('SELECT max(version) AS v FROM app_migration_history')).rows[0].v, 2);
-    await writeFile(new URL('003_test.sql', url), 'BEGIN;\nCREATE TABLE rollback_probe(id integer);\nCOMMIT;\n');
-    assert.deepEqual((await migrate(pool, { directory: url })).applied, [3]);
+    assert.equal((await pool.query('SELECT max(version) AS v FROM app_migration_history')).rows[0].v, 3);
+    await writeFile(new URL('004_test.sql', url), 'BEGIN;\nCREATE TABLE rollback_probe(id integer);\nCOMMIT;\n');
+    assert.deepEqual((await migrate(pool, { directory: url })).applied, [4]);
     // Remove only this suite's deliberate probe, retaining the actual app schema.
     await pool.query('DROP TABLE rollback_probe');
-    await pool.query('DELETE FROM app_migration_history WHERE version=3');
-    await pool.query('DELETE FROM schema_migrations WHERE version=3');
+    await pool.query('DELETE FROM app_migration_history WHERE version=4');
+    await pool.query('DELETE FROM schema_migrations WHERE version=4');
   });
   await t.test('transaction rollback is atomic and releases the connection', async () => {
     await assert.rejects(transaction(pool, async client => {

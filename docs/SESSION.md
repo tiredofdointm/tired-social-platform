@@ -268,3 +268,12 @@ until the corresponding shared journeys are implemented and verified.
 C02 authenticated cloud health/routing and A02 real Google/database activation remain
 blocked on the documented prerequisites. C03 DNS cutover stays gated. No background
 implementation is running after this checkpoint. Use [skip ci] for this docs-only save.
+
+## Shared events and private plans
+The Shared events workspace supports publication, upcoming event discovery,
+capacity-limited RSVPs and cancellation. Private plans support in-app invitations
+by handle, acceptance, decline and leaving. Pending invitees see the title only.
+The event start is entered in the browser's local timezone and stored as UTC.
+Migration 003 adds the shared tables. Apply it before activating this build with
+the cloud database. Live Google login and authenticated staging access remain open.
+Next: review platform and database CI, then build configurable publishing and review.

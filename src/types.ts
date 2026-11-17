@@ -1,4 +1,4 @@
-export type Page = 'community'|'discover'|'feed'|'plans'|'talent'|'studio'|'settings';
+export type Page = 'shared-events'| 'community'|'discover'|'feed'|'plans'|'talent'|'studio'|'settings';
 export type FeedMode = 'for-you'|'following'|'latest';
 export interface Preferences {theme:'dark'|'light';accent:'lime'|'violet'|'peach';density:'comfortable'|'compact';motion:boolean;review:boolean}
 export interface EventListing {id:string;title:string;subtitle:string;category:string;location:string;date:string;price:number;capacity:number;going:number;friends:string[];style:string;owner:string;status:'published'|'pending'}

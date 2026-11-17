@@ -1,3 +1,4 @@
+import {eventsPlans} from './events-plans.mjs';
 import {randomUUID} from 'node:crypto';
 import {authRepository,sessionTokenFrom,validMutation} from './auth.mjs';
 import {socialRepository} from './social-repository.mjs';
@@ -23,7 +24,7 @@ export function createSocialHandler({config,pool}){
  let windowStart=Date.now(),writes=0;
  return async(req,res,url)=>{
   const path=url.pathname;
-  if(!/^\/api\/v1\/(feed|posts|profiles|follows|blocks)(\/|$)/.test(path) && path!=='/api/v1/me/profile' && path!=='/api/v1/me/follow-requests')return false;
+  if(!/^\/api\/v1\/(feed|posts|profiles|follows|blocks|events|plans)(\/|$)/.test(path) && path!=='/api/v1/me/profile' && path!=='/api/v1/me/follow-requests')return false;
   const requestId=randomUUID();res.setHeader('Cache-Control','no-store');res.setHeader('X-Request-ID',requestId);
   function send(status,data){res.writeHead(status,{'Content-Type':'application/json'});res.end(JSON.stringify(data));}
   try{
@@ -34,6 +35,10 @@ export function createSocialHandler({config,pool}){
    if(method!=='GET'){
     if(!validMutation(req,token,config.origin))fail(403,'invalid_csrf');
     if(Date.now()-windowStart>=60000){windowStart=Date.now();writes=0;}if(++writes>300)fail(429,'rate_limited');
+   }
+   if(/^\/api\/v1\/(events|plans)(\/|$)/.test(path)){
+    await eventsPlans({pool,actor,path,method,req,send,fail,readJson,fields,text,uuid});
+    return true;
    }
    let match;
    if(path==='/api/v1/feed' && method==='GET'){
