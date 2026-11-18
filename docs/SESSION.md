@@ -470,3 +470,11 @@ M02 remains open for automatic payout reconciliation. Stripe last reported USD 1
 The sandbox provider panel now shows pending and available USD balances and checks up to 1,000 funding entries per automatic payout. The Cloud Shell diagnostic follows the test booking's destination payment into the provider's payout. It reports a match only after both the booking contribution and the complete payout total agree. The last observed sandbox balance was $100 pending. No paid payout has been verified yet.
 
 Next: stage this reviewed commit and run the sandbox release batch in docs/DEPLOYMENT.md. It includes the Google sign-in recovery checks from PR #15 and the payout diagnostic. If funds are still pending, use the read-only diagnostic for subsequent checks; staging is unnecessary for a balance refresh. Production was last verified on revision 00044-pov.
+
+## Booking payout verification in the provider dashboard
+
+The automatic Cloud Build deployment of PR #16 succeeded on `tired-social-staging-00033-vvh` in us-west1. Its health endpoint requires authorized access. Public health still reported `00044-pov`, and the europe-west1 `ticket-test` tag reported `00043-fub`. The exact us-west1 build is f7ee614c-7947-49ee-8295-cfb8639149ff.
+
+Find talent now lets providers select one of their recent paid bookings under Sandbox payouts, including bookings that have ended. The check traces the saved Stripe payment through the provider transfer and verifies its contribution to a reconciled paid payout. The browser and Cloud Shell diagnostic use the same matching rules.
+
+Next: deploy the merged changes to the europe-west1 payment sandbox with the existing release batch, then verify the real booking in Find talent. Cloud Shell and the Cloud Run console returned Site Unavailable from the connected browser. The booking payout remains in verification.

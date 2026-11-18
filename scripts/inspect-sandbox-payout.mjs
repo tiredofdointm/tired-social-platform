@@ -1,6 +1,6 @@
 import {readFileSync} from 'node:fs';
 import {pathToFileURL} from 'node:url';
-import {reconcilePayout, usdBalance} from '../server/payout-report.mjs';
+import {reconcilePayout, matchBookingPayout, usdBalance} from '../server/payout-report.mjs';
 
 function check(condition, message) {
   if (!condition) throw Error(message);
@@ -35,20 +35,20 @@ export async function inspectBookingPayout(get, transferId, since) {
   ]);
   const {pendingCents, availableCents} = usdBalance(balance);
   const recent = [];
+  const reports = [];
   for (const payout of page.data) {
     const row = await reconcilePayout(payout, params => get('balance_transactions', params, account), transfer.destination_payment);
+    reports.push(row);
     recent.push({amount: payout.amount, currency: payout.currency, status: payout.status,
       automatic: payout.automatic, reconciliation_status: payout.reconciliation_status,
       funding_check: row.reconciliation, funding_cents: row.fundingCents, booking_funding_cents: row.bookingFundingCents});
   }
-  const linked = recent.filter(row => row.booking_funding_cents !== null);
-  const verified = linked.length === 1 && linked[0].funding_check === 'matched' && linked[0].booking_funding_cents === transfer.amount;
   return {
     settings: {payouts_enabled: settings.payouts_enabled, interval: settings.settings.payouts.schedule.interval,
       delay_days: settings.settings.payouts.schedule.delay_days},
     balance: {available_usd_cents: availableCents, pending_usd_cents: pendingCents},
     recent_payouts: recent, older_payouts_exist: page.has_more,
-    booking_payout_check: verified ? 'matched' : linked.length ? 'mismatch' : 'unverified'
+    booking_payout_check: matchBookingPayout(reports, transfer.amount).status
   };
 }
 

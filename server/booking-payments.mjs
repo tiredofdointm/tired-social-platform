@@ -1,4 +1,5 @@
 import {transaction} from './database.mjs';
+import {recentPayouts, matchBookingPayout} from './payout-report.mjs';
 
 const uuid=/^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i;
 
@@ -105,8 +106,8 @@ export async function bookingRefund({pool,connect,actor,id,send,fail}){
  return send(200,result);
 }
 
-export async function bookingTransfer({pool,connect,actor,id,send,fail}){
- const payment=(await pool.query(`SELECT b.payment_id,b.state,b.service_cents,b.fee_cents,b.destination_account
+async function verifiedTransfer({pool,connect,actor,id,fail}){
+ const payment=(await pool.query(`SELECT b.payment_id,b.state,b.service_cents,b.fee_cents,b.destination_account,b.refunded_cents
   FROM booking_payments b JOIN service_slots s ON s.request_id=b.request_id
   WHERE b.request_id=$1 AND s.provider_id=$2`,[id,actor])).rows[0];
  if(!payment)fail(404,'not_found');
@@ -125,6 +126,23 @@ export async function bookingTransfer({pool,connect,actor,id,send,fail}){
     transfer.destination!==payment.destination_account||transfer.amount!==payment.service_cents)
   fail(409,'booking_transfer_mismatch');
 
- return send(200,{currency:'usd',chargedCents:total,refundedCents:charge.amount_refunded,
+ return {payment,charge,transfer,total};
+}
+
+export async function bookingTransfer(context){
+ const {charge,transfer,total}=await verifiedTransfer(context);
+ return context.send(200,{currency:'usd',chargedCents:total,refundedCents:charge.amount_refunded,
   transferredCents:transfer.amount,reversedCents:transfer.amount_reversed});
+}
+
+export async function bookingPayout(context){
+ const {payment,charge,transfer}=await verifiedTransfer(context);
+ if(payment.state==='refunded' || payment.refunded_cents!==0 || charge.amount_refunded!==0 || transfer.amount_reversed!==0){
+  return context.send(200,{status:'adjusted'});
+ }
+ if(typeof transfer.destination_payment!=='string' || !/^(py|ch)_[A-Za-z0-9]+$/.test(transfer.destination_payment)){
+  return context.send(200,{status:'missing_payment'});
+ }
+ const payouts=await recentPayouts(context.connect, payment.destination_account, context.fail, transfer.destination_payment);
+ return context.send(200,matchBookingPayout(payouts,payment.service_cents));
 }

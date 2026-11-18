@@ -40,6 +40,24 @@ export async function reconcilePayout(payout, listEntries, destinationPayment = 
   return finish('more_entries');
 }
 
+export async function recentPayouts(connect, account, fail, destinationPayment = null) {
+  const scope = {stripeAccount: account};
+  const page = await connect.payouts.list({limit: 5}, scope);
+  if (page.data.some(payout => payout.livemode !== false)) fail(503, 'sandbox_payouts_unavailable');
+  const entries = params => connect.balanceTransactions.list(params, scope);
+  return Promise.all(page.data.map(payout => reconcilePayout(payout, entries, destinationPayment)));
+}
+
+export function matchBookingPayout(reports, expectedCents) {
+  const linked = reports.filter(report => report.bookingFundingCents !== null);
+  if (!linked.length) return {status: 'unverified', payoutsChecked: reports.length};
+  const [payout] = linked;
+  if (linked.length !== 1 || payout.reconciliation !== 'matched' || payout.bookingFundingCents !== expectedCents) {
+    return {status: 'mismatch'};
+  }
+  return {status: 'matched', contributionCents: payout.bookingFundingCents, payoutCents: payout.amountCents};
+}
+
 export function usdBalance(balance) {
   if (balance.livemode !== false) throw Error('Expected a sandbox balance');
   const sum = amounts => amounts.filter(row => row.currency === 'usd').reduce((total, row) => total + row.amount, 0);

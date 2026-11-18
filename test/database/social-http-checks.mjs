@@ -38,6 +38,7 @@ export async function socialHttpChecks(t,pool){
   let bookingStripeRefunded=0;
   let bookingTransferReversed=0;
   let bookingTransferDestination='acct_providerFixture';
+  let bookingPayoutAvailable=false;
   const connect={
    balance:{retrieve:async (params,scope)=>{
     assert.deepEqual(scope,{stripeAccount:'acct_providerFixture'});
@@ -48,6 +49,7 @@ export async function socialHttpChecks(t,pool){
     assert.deepEqual(scope,{stripeAccount:'acct_providerFixture'});
     const base={livemode:false,type:'bank_account',currency:'usd',status:'paid',
      automatic:true,reconciliation_status:'completed',amount:10000,arrival_date:1800000000};
+    if(bookingPayoutAvailable)return {data:[{...base,id:'po_booking',amount:13506}]};
     return {data:[{...base,id:'po_match',balance_transaction:'txn_payout'},
      {...base,id:'po_diff',amount:10500},{...base,id:'po_manual',automatic:false},
      {...base,id:'po_pending',status:'pending'},{...base,id:'po_more'}]};
@@ -55,6 +57,10 @@ export async function socialHttpChecks(t,pool){
    balanceTransactions:{list:async ({payout,limit,starting_after},scope)=>{
     assert.equal(limit,100);
     assert.deepEqual(scope,{stripeAccount:'acct_providerFixture'});
+    if(payout==='po_booking')return {has_more:false,data:[
+     {id:'txn_book',source:'py_bookingFixture',currency:'usd',net:12506},
+     {id:'txn_other',source:'py_other',currency:'usd',net:1000}
+    ]};
     assert.ok(['po_match','po_diff','po_more'].includes(payout));
     if(starting_after){
      assert.equal(payout,'po_more');
@@ -80,7 +86,7 @@ export async function socialHttpChecks(t,pool){
    transfers:{retrieve:async id=>{
     assert.equal(id,'tr_booking_fixture');
     return {livemode:false,currency:'usd',source_transaction:'ch_booking_fixture',
-     destination:bookingTransferDestination,amount:12506,amount_reversed:bookingTransferReversed};
+     destination:bookingTransferDestination,destination_payment:'py_bookingFixture',amount:12506,amount_reversed:bookingTransferReversed};
    }},
    accounts:{
     create:async (input,options)=>{
@@ -394,12 +400,29 @@ export async function socialHttpChecks(t,pool){
    assert.equal(await bookingState(),'paid');
    const bookingTransfer=booking+'/transfer';
    const bookingRefund=booking+'/refund';
+   const payoutPath=booking+'/payout';
+   assert.equal((await request(null,payoutPath)).status,401);
+   assert.equal((await request(buyerAccount,payoutPath)).status,404);
+   assert.equal((await request(customers[1-bookingWinner],payoutPath)).status,404);
+   assert.equal((await request(bob,payoutPath,'POST')).status,405);
+   assert.deepEqual((await request(bob,payoutPath)).data,{status:'unverified',payoutsChecked:5});
+   bookingPayoutAvailable=true;
+   assert.deepEqual((await request(bob,payoutPath)).data,{status:'matched',contributionCents:12506,payoutCents:13506});
+   const paymentList=(await request(bob,'services/connect/payouts')).data.bookings;
+   assert.equal(paymentList.length,1);
+   assert.equal(paymentList[0].id,attempts[bookingWinner].data.request_id);
+   assert.equal(paymentList[0].serviceCents,12506);
+   sandboxEnabled=false;
+   assert.equal((await request(bob,payoutPath)).status,503);
+   sandboxEnabled=true;
+
    assert.equal((await request(buyerAccount,bookingTransfer)).status,404);
    assert.equal((await request(buyerAccount,bookingRefund,'POST')).status,404);
    assert.equal((await request(bob,bookingRefund,'POST',undefined,{'x-csrf-token':''})).status,403);
    assert.deepEqual((await request(bob,bookingTransfer)).data,
     {currency:'usd',chargedCents:13444,refundedCents:0,transferredCents:12506,reversedCents:0});
    bookingTransferDestination='acct_other';
+   assert.equal((await request(bob,payoutPath)).data.error.code,'booking_transfer_mismatch');
    assert.equal((await request(bob,bookingTransfer)).data.error.code,'booking_transfer_mismatch');
    bookingTransferDestination='acct_providerFixture';
    for(let i=0;i<2;i++)assert.equal((await request(bob,bookingRefund,'POST')).data.status,'succeeded');
@@ -414,6 +437,8 @@ export async function socialHttpChecks(t,pool){
    assert.equal(await bookingState(),'refunded');
    bookingStripeRefunded=13444;
    bookingTransferReversed=12506;
+   assert.deepEqual((await request(bob,payoutPath)).data,{status:'adjusted'});
+   assert.deepEqual((await request(bob,'services/connect/payouts')).data.bookings,[]);
    assert.equal((await request(bob,bookingRefund,'POST')).data.status,'refunded');
    assert.deepEqual((await request(bob,bookingTransfer)).data,
     {currency:'usd',chargedCents:13444,refundedCents:13444,transferredCents:12506,reversedCents:12506});
