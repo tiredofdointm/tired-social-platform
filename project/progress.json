@@ -3,9 +3,9 @@
   "updated": "2026-11-17",
   "objective": "Independent Google Cloud social/events/talent platform; no Laravel; customizable UI and verified production journeys.",
   "currentSession": {
-    "primaryTask": "E02",
-    "nextTask": "E02",
-    "reason": "PostgreSQL, browser and platform CI passed for shared service publishing. Apply migration 005 before promoting the candidate."
+    "primaryTask": null,
+    "nextTask": "U02",
+    "reason": "Cloud SQL schema version 5 and production revision tired-social-platform-00016-qiz verified. Provider directory published; next verify the rendered desktop and mobile experience."
   },
   "workInProgressLimit": 1,
   "tasks": [
@@ -247,7 +247,7 @@
     {
       "id": "E02",
       "title": "Configurable publishing and review",
-      "status": "verification",
+      "status": "done",
       "priority": 1,
       "dependsOn": [
         "E01"
@@ -255,7 +255,9 @@
       "acceptance": "Automatic default and manual review work for events/services; only authorized admin changes policy.",
       "evidence": [
         "https://github.com/tiredofdointm/tired-social-platform/actions/runs/44201179510",
-        "https://github.com/tiredofdointm/tired-social-platform/actions/runs/44201179533"
+        "https://github.com/tiredofdointm/tired-social-platform/actions/runs/44201179533",
+        "https://console.cloud.google.com/run/jobs/executions/details/europe-west1/tired-social-migrate-8z8rl?project=1081107677856",
+        "https://tired.events/api/health"
       ],
       "workstream": "E"
     },
