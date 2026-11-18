@@ -434,3 +434,9 @@ Next: M02, Stripe Connect sandbox onboarding, fee disclosure, and payout reconci
 The first slice of M02 adds Stripe-hosted onboarding for providers with a published service listing. Migration 011 stores one sandbox connected-account reference per provider. Set STRIPE_CONNECT_TEST_ENABLED=1 with the existing sandbox secret on the tagged staging revision only. The app requests the transfers capability and reads current transfer and payout readiness from Stripe. Provider identity and banking details stay in Stripe.
 
 The sandbox design assumes one US provider and a USD payment per accepted booking. The proposed marketplace flow charges through the platform and transfers the provider share to their connected account. Next: run onboarding in the sandbox, then implement fee disclosure, booking settlement, and refund and payout reconciliation. Live pricing and platform liability decisions remain open.
+
+## Sandbox booking quotes
+
+Migration 012 adds an optional server-calculated USD quote at provider confirmation. Buyers and providers see the service price, customer-paid platform fee and total. Existing confirmations retain their amounts on retry. Cancellation clears the quote before reusing the slot. Quotes require the existing Connect sandbox flag and STRIPE_BOOKING_TEST_FEE_BPS, an integer from 0 to 10000. No live fee has been selected.
+
+Next: exercise quoted bookings between two signed-in sandbox participants, then add checkout for the exact saved quote and reconcile connected-account proceeds, refunds and payouts.
