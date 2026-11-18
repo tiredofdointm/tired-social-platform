@@ -137,11 +137,29 @@ export async function socialHttpChecks(t,pool){
    assert.equal(await state(),'open');
    for(let i=0;i<2;i++)assert.equal(await notify('checkout.session.async_payment_succeeded',payment()),200);
    assert.equal(await state(),'issued');
+   const guestList=ticketPath+'/guest-list';
+   const checkIn=ticketPath+'/check-in';
+   const ticketCode=(await request(buyer,'events')).data.events.find(row=>row.id===paid.data.id).my_ticket_code;
+   assert.ok(ticketCode);
+   assert.equal((await request(waitingBuyer,'events')).data.events.find(row=>row.id===paid.data.id).my_ticket_code,null);
+   assert.equal((await request(bob,guestList)).status,404);
+   assert.equal((await request(bob,checkIn,'POST',{code:ticketCode})).status,404);
+   assert.equal((await request(alice,checkIn,'POST',{code:ticketCode},{'x-csrf-token':''})).status,403);
+   const checkInResults=await Promise.all([request(alice,checkIn,'POST',{code:ticketCode}),request(alice,checkIn,'POST',{code:ticketCode})]);
+   assert.deepEqual(checkInResults.map(result=>result.status).sort(),[200,409]);
+   const admitted=(await request(alice,guestList)).data;
+   assert.deepEqual(admitted.totals,{issued:1,checked_in:1,net_cents:'1500'});
+   assert.ok(admitted.guests[0].checked_in_at);
+   assert.ok(!('id' in admitted.guests[0]));
+
    assert.equal(await notify('charge.refunded',{...charge(),amount_refunded:500}),200);
    assert.equal(await state(),'issued');
    assert.equal(await notify('charge.refunded',charge()),200);
    assert.equal(await notify('checkout.session.completed',payment()),200);
    assert.equal(await state(),'refunded');
+   assert.equal((await request(alice,checkIn,'POST',{code:ticketCode})).status,404);
+   assert.deepEqual((await request(alice,guestList)).data,{guests:[],totals:{issued:0,checked_in:0,net_cents:'0'}});
+
    assert.equal((await request(waitingBuyer,holdPath,'PUT')).status,200);
    assert.equal((await request(waitingBuyer,checkoutPath,'POST')).status,200);
    assert.equal(await notify('charge.refunded',charge()),200);
