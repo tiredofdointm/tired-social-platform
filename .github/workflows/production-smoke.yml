@@ -1,0 +1,26 @@
+name: Production smoke checks
+on:
+  pull_request:
+    paths:
+      - 'scripts/check-production.mjs'
+      - '.github/workflows/production-smoke.yml'
+  workflow_dispatch:
+    inputs:
+      revision:
+        description: Expected Cloud Run revision, if verifying a rollout
+        type: string
+        required: false
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    env:
+      EXPECTED_CLOUD_RUN_REVISION: ${{ inputs.revision }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node scripts/check-production.mjs
