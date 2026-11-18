@@ -96,7 +96,7 @@ body[data-theme=light] .error { color: #9e3021; }
   .page-title, .plan-card { flex-direction: column; align-items: flex-start; }
 }
 
-.stat strong.stat-text { font-size: 1.125rem; }
+.stat strong.stat-text { font-size: 1rem; overflow-wrap: normal; }
 .empty > strong { display: block; margin-bottom: 0.4rem; font-size: 1.15rem; }
 @media (max-width: 400px) {
   .hero-copy h1 { font-size: 34px; }
