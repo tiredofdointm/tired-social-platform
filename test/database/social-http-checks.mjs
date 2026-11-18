@@ -31,8 +31,28 @@ export async function socialHttpChecks(t,pool){
    retrieve:async id=>{assert.equal(created.id,id);return created;}
   };
   let sandboxEnabled=true;
-  const sandbox=createSocialHandler({config,pool,payments});
-  const publicEvents=createSocialHandler({config,pool,payments:null});
+  let connectAccounts=0;
+  const connect={
+   accounts:{
+    create:async (input,options)=>{
+     assert.equal(input.capabilities.transfers.requested,true);
+     assert.equal(options.idempotencyKey,'sandbox-provider-'+bob.userId);
+     connectAccounts++;
+     return {id:'acct_providerFixture'};
+    },
+    retrieve:async id=>{
+     assert.equal(id,'acct_providerFixture');
+     return {details_submitted:true,capabilities:{transfers:'active'},payouts_enabled:true};
+    }
+   },
+   accountLinks:{create:async input=>{
+    assert.equal(input.account,'acct_providerFixture');
+    assert.equal(input.return_url,config.origin+'/#talent');
+    return {url:'https://connect.stripe.com/setup/test'};
+   }}
+  };
+  const sandbox=createSocialHandler({config,pool,payments,connect});
+  const publicEvents=createSocialHandler({config,pool,payments:null,connect:null});
   const server=createServer({auth:createAuthHandler({config,pool,provider:{}}),
    social:(...args)=>(sandboxEnabled?sandbox:publicEvents)(...args)});
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
@@ -208,6 +228,19 @@ export async function socialHttpChecks(t,pool){
    assert.equal((await request(bob,'services','POST',{...service, category:'Incorrect'})).status,400);
    assert.equal((await request(bob,'services','POST',service,{'x-csrf-token':''})).status,403);
    const published = await request(bob,'services','POST',service);
+   assert.equal((await request(null,'services/connect')).status,401);
+   assert.equal((await request(bob,'services/connect','POST',undefined,{'x-csrf-token':''})).status,403);
+   assert.equal((await request(alice,'services/connect','POST')).data.eligible,false);
+   assert.equal((await request(bob,'services/connect')).data.connected,false);
+   const links=await Promise.all([request(bob,'services/connect','POST'),request(bob,'services/connect','POST')]);
+   assert.ok(links.every(result=>result.status===200 && result.data.url==='https://connect.stripe.com/setup/test'));
+   assert.equal(connectAccounts,1);
+   assert.deepEqual((await request(bob,'services/connect')).data,
+    {enabled:true,eligible:true,connected:true,detailsSubmitted:true,transfersEnabled:true,payoutsEnabled:true});
+   sandboxEnabled=false;
+   assert.deepEqual((await request(bob,'services/connect')).data,{enabled:false});
+   sandboxEnabled=true;
+
    assert.equal(published.status,201);
    assert.equal(published.data.publication,'published');
    assert.ok((await request(alice,'services')).data.listings.some(row=>row.id===published.data.id));
