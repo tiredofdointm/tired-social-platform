@@ -1,9 +1,17 @@
+import {transaction} from './database.mjs';
+import {bookingRoutes} from './bookings.mjs';
+
 const categories = ['Photography', 'DJ', 'Security', 'Other'];
 
-export async function services({pool, actor, path, method, req, send, fail, readJson, fields, text, uuid}) {
+export async function services(context) {
+  if (await bookingRoutes(context)) return;
+  const {pool, actor, path, method, req, send, fail, readJson, fields, text, uuid} = context;
   if (path === '/api/v1/services' && method === 'GET') {
     const {rows} = await pool.query(`SELECT s.id, s.title, s.category, s.description,
-      p.handle, p.display_name FROM service_listings s
+      p.handle, p.display_name, s.owner_id=$1 AS owned,
+      ARRAY(SELECT json_build_object('id',a.id,'start',a.starts_at) FROM service_slots a
+        WHERE a.listing_id=s.id AND a.customer_id IS NULL AND a.starts_at>now()
+        ORDER BY a.starts_at) AS availability FROM service_listings s
       JOIN users u ON u.id=s.owner_id AND u.status='active'
       JOIN profiles p ON p.user_id=s.owner_id
       WHERE s.publication='published' AND s.withdrawn_at IS NULL
@@ -67,9 +75,15 @@ export async function services({pool, actor, path, method, req, send, fail, read
 
   const listing = /^\/api\/v1\/services\/([^/]+)$/.exec(path);
   if (listing && method === 'DELETE' && uuid(listing[1])) {
-    const {rowCount} = await pool.query(`UPDATE service_listings SET withdrawn_at=now()
-      WHERE owner_id=$1 AND id=$2 AND withdrawn_at IS NULL`, [actor, listing[1]]);
-    if (!rowCount) fail(404, 'not_found');
+    await transaction(pool, async db => {
+      const {rowCount} = await db.query(`UPDATE service_listings SET withdrawn_at=now()
+        WHERE owner_id=$1 AND id=$2 AND withdrawn_at IS NULL`, [actor,listing[1]]);
+      if (!rowCount) fail(404,'not_found');
+      const reserved = await db.query(`SELECT id FROM service_slots WHERE listing_id=$1
+        AND customer_id IS NOT NULL AND starts_at + interval '1 hour' > now() LIMIT 1`, [listing[1]]);
+      if (reserved.rowCount) fail(409,'active_bookings');
+      await db.query('DELETE FROM service_slots WHERE listing_id=$1 AND customer_id IS NULL',[listing[1]]);
+    });
     return send(200, {withdrawn:true});
   }
 

@@ -3,7 +3,8 @@ import type {FormEvent, ReactNode} from 'react';
 
 const categories = ['Photography', 'DJ', 'Security', 'Other'];
 type Listing = {id:string; title:string; category:string; description:string};
-type DirectoryEntry = Listing & {display_name:string; handle:string};
+type DirectoryEntry = Listing & {display_name:string; handle:string; owned:boolean; availability:{id:string;start:string}[]};
+type Booking = {request_id:string; starts_at:string; title:string; counterpart:string; provider:boolean; confirmed:boolean};
 type Publication = 'published' | 'pending' | 'rejected';
 type Publishing = {
   manual_review:boolean;
@@ -13,7 +14,7 @@ type Publishing = {
 };
 type View =
   | {kind:'loading' | 'preview' | 'signed-out' | 'error'}
-  | {kind:'ready'; csrf:string; listings:DirectoryEntry[]; publishing:Publishing};
+  | {kind:'ready'; csrf:string; listings:DirectoryEntry[]; bookings:Booking[]; publishing:Publishing};
 
 class DirectoryError extends Error {
   constructor(readonly status:number) { super('Could not load or save services.'); }
@@ -49,11 +50,12 @@ export function SharedServices({preview, onPreviewMode}:{
           return;
         }
         const session = await get<{csrfToken:string}>('me', signal);
-        const [directory, publishing] = await Promise.all([
+        const [directory, publishing, reservations] = await Promise.all([
           get<{listings:DirectoryEntry[]}>('services', signal),
           get<Publishing>('services/publishing', signal),
+          get<{bookings:Booking[]}>('services/bookings', signal),
         ]);
-        if (!signal.aborted) setView({kind:'ready', csrf:session.csrfToken, listings:directory.listings, publishing});
+        if (!signal.aborted) setView({kind:'ready', csrf:session.csrfToken, listings:directory.listings, bookings:reservations.bookings, publishing});
       } catch (error) {
         if (!signal.aborted) setView({kind:error instanceof DirectoryError && error.status === 401 ? 'signed-out' : 'error'});
       }
@@ -83,6 +85,12 @@ export function SharedServices({preview, onPreviewMode}:{
       });
       if (response.status === 401) {
         setView({kind:'signed-out'});
+        return false;
+      }
+      if (response.status === 409) {
+        const problem = await response.json();
+        setMessage(problem.error?.code === 'active_bookings' ? 'Resolve upcoming bookings before withdrawing this listing.' : 'This time is unavailable. Check your bookings and choose another time.');
+        setRefresh(value => value + 1);
         return false;
       }
       if (!response.ok) {
@@ -166,6 +174,17 @@ export function SharedServices({preview, onPreviewMode}:{
         </div>
       </article>)}
     </section>}
+    {view.bookings.length > 0 && <section className="panel"><h2>Your bookings</h2>
+      {view.bookings.map(booking => <article key={booking.request_id}>
+        <h3>{booking.title}</h3>
+        <p>{new Date(booking.starts_at).toLocaleString()} · 1 hour · {booking.counterpart}</p>
+        <p>{booking.confirmed ? 'Confirmed' : 'Awaiting provider approval'}</p>
+        {Date.parse(booking.starts_at)>Date.now() && <div className="actions">
+          {booking.provider && !booking.confirmed && <button disabled={busy} onClick={() => void change('/bookings/'+booking.request_id+'/confirm','POST',undefined,()=>'Booking confirmed.')}>Confirm request</button>}
+          <button disabled={busy} onClick={() => void change('/bookings/'+booking.request_id+'/cancel','POST',undefined,()=>'Booking canceled.')}>Cancel booking</button>
+        </div>}
+      </article>)}
+    </section>}
     <div className="filters provider-filters">
       <label>Search services<input type="search" value={query} onChange={event => setQuery(event.target.value)}/></label>
       <label>Category<select value={category} onChange={event => setCategory(event.target.value)}>
@@ -175,6 +194,26 @@ export function SharedServices({preview, onPreviewMode}:{
     <div className="grid">{matches.map(item => <article className="panel" key={item.id}>
       <span className="eyebrow">{item.category}</span><h2>{item.title}</h2>
       <p>{item.display_name} · @{item.handle}</p><p className="post-text">{item.description}</p>
+      <details><summary>Availability</summary>
+        {item.owned && <form onSubmit={async event => {
+          event.preventDefault();
+          const form=event.currentTarget;
+          const value=String(new FormData(form).get('start'));
+          const start=new Date(value+'Z');
+          if (!Number.isFinite(start.valueOf()) || start.valueOf()<=Date.now() || start.getUTCMinutes()!==0) {
+            setMessage('Choose a future start on a whole UTC hour.');
+            return;
+          }
+          if (await change('/listings/'+item.id+'/availability','POST',{start:start.toISOString()},()=>'Availability added.')) form.reset();
+        }}>
+          <label>One-hour start (UTC)<input type="datetime-local" name="start" step="3600" required/></label>
+          <button disabled={busy}>Add time</button>
+        </form>}
+        {!item.availability.length && <p>No available times.</p>}
+        {item.availability.map(slot => <p key={slot.id}>{new Date(slot.start).toLocaleString()} · 1 hour{' '}
+          <button disabled={busy} onClick={() => void change('/slots/'+slot.id+(item.owned?'/remove':'/request'),'POST',undefined,()=>item.owned?'Time removed.':'Booking requested.')}>{item.owned?'Remove time':'Request time'}</button>
+        </p>)}
+      </details>
     </article>)}</div>
     <p role="status">{matches.length
       ? `${matches.length} service${matches.length === 1 ? '' : 's'} found.`

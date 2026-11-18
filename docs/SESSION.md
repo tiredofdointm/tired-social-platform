@@ -387,3 +387,11 @@ U02 is complete for the reviewed accessibility scope.
 Next: M01. Extend the existing service directory with provider availability and
 booking requests. Verify provider and customer permissions and concurrent booking
 conflicts. Use the existing Google identity and publishing implementation.
+
+## Provider booking requests
+Migration 006 introduces one-hour availability, unique per provider across
+listings and per customer across bookings. Requests hold a slot until the
+provider confirms or either participant cancels. Both participants can view
+upcoming requests in Find talent. Publishing and booking use authenticated
+server identities. Next: verify the database concurrency suite and browser CI,
+apply migration 006 with the release job, then stage and verify before promotion.

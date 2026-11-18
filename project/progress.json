@@ -3,9 +3,9 @@
   "updated": "2026-11-17",
   "objective": "Independent Google Cloud social/events/talent platform; no Laravel; customizable UI and verified production journeys.",
   "currentSession": {
-    "primaryTask": null,
+    "primaryTask": "M01",
     "nextTask": "M01",
-    "reason": "Continue the talent marketplace with provider availability, booking requests, and conflict checks."
+    "reason": "Verify provider booking and concurrent request behavior before applying migration 006 and releasing."
   },
   "workInProgressLimit": 1,
   "tasks": [
@@ -301,7 +301,7 @@
     {
       "id": "M01",
       "title": "Provider profiles, services and booking availability",
-      "status": "ready",
+      "status": "verification",
       "priority": 1,
       "dependsOn": [
         "E02"
