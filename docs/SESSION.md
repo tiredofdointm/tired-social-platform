@@ -428,3 +428,9 @@ PR #7 merged at `1ee3b3d9b0066d5a2c545c6282ebcb2787d268f5`. All three CI workflo
 Cloud Shell reported 100% production traffic on `tired-social-platform-00037-nix` and a healthy response from the same revision on `tired.events`. The production candidate passed the Google callback and disabled sandbox webhook checks before promotion. Rollback revision is `tired-social-platform-00033-raf`.
 
 Next: M02, Stripe Connect sandbox onboarding, fee disclosure, and payout reconciliation. Live ticket payments remain disabled.
+
+## Stripe Connect sandbox onboarding
+
+The first slice of M02 adds Stripe-hosted onboarding for providers with a published service listing. Migration 011 stores one sandbox connected-account reference per provider. Set STRIPE_CONNECT_TEST_ENABLED=1 with the existing sandbox secret on the tagged staging revision only. The app requests the transfers capability and reads current transfer and payout readiness from Stripe. Provider identity and banking details stay in Stripe.
+
+The sandbox design assumes one US provider and a USD payment per accepted booking. The proposed marketplace flow charges through the platform and transfers the provider share to their connected account. Next: run onboarding in the sandbox, then implement fee disclosure, booking settlement, and refund and payout reconciliation. Live pricing and platform liability decisions remain open.
