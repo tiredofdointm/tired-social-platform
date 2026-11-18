@@ -464,3 +464,9 @@ Next: stage the panel and verify an actual paid automatic sandbox payout. The ea
 Cloud Shell confirmed 100% production traffic on `tired-social-platform-00044-pov` and a healthy response from that revision on `https://tired.events`. The candidate passed the Google callback and disabled sandbox webhook checks before promotion. Rollback revision: `tired-social-platform-00037-nix`. Sandbox test traffic uses the `ticket-test` tag on `00043-fub`.
 
 M02 remains open for automatic payout reconciliation. Stripe last reported USD 100.00 pending, USD 0.00 available, and no payouts on the connected sandbox account. Payouts are enabled on a daily schedule with a two-day settlement delay. Live payments remain disabled.
+
+## Provider balance and booking payout verification
+
+The sandbox provider panel now shows pending and available USD balances and checks up to 1,000 funding entries per automatic payout. The Cloud Shell diagnostic follows the test booking's destination payment into the provider's payout. It reports a match only after both the booking contribution and the complete payout total agree. The last observed sandbox balance was $100 pending. No paid payout has been verified yet.
+
+Next: stage this reviewed commit and run the sandbox release batch in docs/DEPLOYMENT.md. It includes the Google sign-in recovery checks from PR #15 and the payout diagnostic. If funds are still pending, use the read-only diagnostic for subsequent checks; staging is unnecessary for a balance refresh. Production was last verified on revision 00044-pov.
