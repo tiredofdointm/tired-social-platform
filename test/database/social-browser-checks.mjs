@@ -112,6 +112,23 @@ export async function socialBrowserChecks(t,pool){
    await b.reload();
    await ticketCard.getByRole('button',{name:'Release hold'}).click();
    await ticketCard.getByText(/1 available/).waitFor();
+   await pool.query(`INSERT INTO ticket_orders(id,event_id,buyer_id,amount,session_id,state)
+    SELECT gen_random_uuid(),id,$1,1500,'cs_test_browser_check_in','issued'
+    FROM events WHERE owner_id=$2 AND title='One ticket show'`,[bob.userId,alice.userId]);
+   await b.getByRole('button',{name:'Refresh lists'}).click();
+   await ticketCard.getByText('Your test ticket is confirmed.').waitFor();
+   const admissionCode=await ticketCard.locator('code').innerText();
+   assert.equal(await ticketCard.getByText('Guest list and check-in').count(),0);
+   const organizerCard=a.getByRole('article').filter({hasText:'One ticket show'});
+   await organizerCard.getByText('Guest list and check-in').click();
+   await organizerCard.getByRole('button',{name:'Load guest list'}).click();
+   await organizerCard.getByText(/0 of 1 guests checked in/).waitFor();
+   await organizerCard.getByLabel('Guest ticket code').fill(admissionCode);
+   await organizerCard.getByRole('button',{name:'Check in guest'}).click();
+   await organizerCard.getByText(/1 of 1 guests checked in/).waitFor();
+   await b.getByRole('button',{name:'Refresh lists'}).click();
+   await ticketCard.getByText(/Checked in at/).waitFor();
+
    await a.getByLabel('Type',{exact:true}).selectOption('plans');
    await a.getByLabel('Title',{exact:true}).fill('Browser meetup');
    await a.getByLabel('Start time in your local timezone').fill(local);

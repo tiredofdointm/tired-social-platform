@@ -6,7 +6,7 @@ export function testPayments(env=process.env){
  if(!key && !secret)return null;
  if(!key?.startsWith('sk_test_') || !secret?.startsWith('whsec_'))throw Error('Invalid test payment configuration');
  const stripe=new Stripe(key,{timeout:5000,maxNetworkRetries:0});
- return {sessions:stripe.checkout.sessions,verify:(raw,signature)=>stripe.webhooks.constructEvent(raw,signature,secret)};
+ return {sessions:stripe.checkout.sessions,refunds:stripe.refunds,verify:(raw,signature)=>stripe.webhooks.constructEvent(raw,signature,secret)};
 }
 
 export async function checkout({db,actor,event,origin,payments,fail}){
