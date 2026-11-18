@@ -68,6 +68,23 @@ jobs:
           DATABASE_URL: postgres://platform_test:ephemeral_ci_only@localhost:5432/platform_test
       - name: Test data and visibility constraints
         run: psql -v ON_ERROR_STOP=1 -f db/tests/identity_social.sql
+      - name: Restore a logical backup into a separate database
+        env:
+          POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
+        run: |
+          set -euo pipefail
+          archive=$(mktemp -d)
+          trap 'rm -rf "$archive"' EXIT
+          docker exec "$POSTGRES_CONTAINER" pg_dump -U platform_test -d platform_test -Fc -O -x >"$archive/platform.dump"
+          docker exec "$POSTGRES_CONTAINER" createdb -U platform_test -T template0 platform_recovery
+          docker exec -i "$POSTGRES_CONTAINER" pg_restore -U platform_test -d platform_recovery -O -x --single-transaction <"$archive/platform.dump"
+          psql -X -v ON_ERROR_STOP=1 -At -d platform_test -f db/tests/backup_fingerprints.sql >"$archive/source.txt"
+          psql -X -v ON_ERROR_STOP=1 -At -d platform_recovery -f db/tests/backup_fingerprints.sql >"$archive/restored.txt"
+          test -s "$archive/source.txt"
+          diff -u "$archive/source.txt" "$archive/restored.txt"
+          psql -X -v ON_ERROR_STOP=1 -d platform_recovery -f db/tests/identity_social.sql
+          DATABASE_URL=postgres://platform_test:ephemeral_ci_only@localhost:5432/platform_recovery npm run db:migrate
+          echo 'Restored PostgreSQL schema, application rows, and migration ledger.'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
