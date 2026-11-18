@@ -18,7 +18,14 @@ export function App(){
  useEffect(()=>{const change=()=>{setPage(hashPage());setQuery('');setMenuOpen(false);};window.addEventListener('hashchange',change);return()=>window.removeEventListener('hashchange',change);},[]);
  useEffect(()=>{Object.assign(document.body.dataset,{theme:state.prefs.theme,accent:state.prefs.accent,density:state.prefs.density,motion:state.prefs.motion?'on':'off'});},[state.prefs]);
  useEffect(()=>{if(!toast)return;const timer=setTimeout(()=>setToast(''),4000);return()=>clearTimeout(timer);},[toast]);
- function go(p:Page){setMenuOpen(false);setPage(p);setQuery('');location.hash=p;requestAnimationFrame(()=>document.getElementById('main')?.focus());}
+ function go(p:Page){
+  const previousFocus=document.activeElement;
+  setMenuOpen(false);setPage(p);setQuery('');location.hash=p;
+  requestAnimationFrame(()=>{
+   if(document.activeElement===previousFocus||document.activeElement===document.body)
+    document.getElementById('main')?.focus();
+  });
+ }
  function openModal(next:ModalState){
   if(!modal&&document.activeElement instanceof HTMLElement)modalOpener.current=document.activeElement;
   setModal(next);
