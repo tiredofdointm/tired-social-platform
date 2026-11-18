@@ -178,6 +178,7 @@ export function SharedServices({preview, onPreviewMode}:{
       </article>)}
     </section>}
     {view.bookings.length > 0 && <section className="panel"><h2>Your bookings</h2>
+      <button type="button" onClick={()=>setRefresh(value=>value+1)}>Refresh bookings</button>
       {view.bookings.map(booking => <article key={booking.request_id}>
         <h3>{booking.title}</h3>
         <p>{new Date(booking.starts_at).toLocaleString()} · 1 hour · {booking.counterpart}</p>
