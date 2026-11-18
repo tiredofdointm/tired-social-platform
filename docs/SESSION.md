@@ -315,3 +315,13 @@ Next: review PostgreSQL and browser CI on the provider listings branch. Run
 migration 005 with the candidate image before promoting a revision that exposes
 the new directory. Keep the existing live revision serving until the candidate
 is verified. Follow the separate two-account identity verification when possible.
+
+## Shared workspace navigation review
+Provider directory changes are merged in 72f610d and production health
+reported tired-social-platform-00014-lh6. The Pages menu replaces the mobile
+navigation overflow. It displays the active page, collapses after navigation,
+and restores button focus on Escape. Shared pages wrap long titles and
+account content. RSVP and plan actions reference the corresponding title.
+
+Next: verify the signed-in Chromium checks at 320px and inspect the Events
+screenshot before staging the UI revision. This change has no schema migration.

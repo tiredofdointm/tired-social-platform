@@ -18,6 +18,11 @@ export async function socialBrowserChecks(t,pool){
    // Only identity bootstrapping is test-only. UI requests, CSRF, APIs and PostgreSQL are real.
    const a=await browser.newPage({extraHTTPHeaders:{cookie:`${SESSION_COOKIE}=${alice.token}`}});
    const b=await browser.newPage({extraHTTPHeaders:{cookie:`${SESSION_COOKIE}=${bob.token}`}});
+   async function navigate(page, name){
+    const menu=page.getByRole('button',{name:/^Pages /});
+    if(await menu.isVisible() && await menu.getAttribute('aria-expanded')==='false') await menu.click();
+    await page.getByRole('button',{name,exact:true}).click();
+   }
    const errors=[];for(const page of [a,b])page.on('pageerror',e=>errors.push(e.message));
    await a.goto(config.origin+'/#community');await b.goto(config.origin+'/#community');
    await a.getByRole('heading',{name:'Your community',exact:true}).waitFor();
@@ -61,14 +66,26 @@ export async function socialBrowserChecks(t,pool){
    assert.ok(await b.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),'Shared community fits mobile');
    await b.evaluate(()=>window.scrollTo(0,0));
    await b.screenshot({path:'artifacts/shared-mobile.png',fullPage:true});
+   const menu=b.getByRole('button',{name:'Pages Shared community',exact:true});
+   await menu.focus();
+   await menu.press('Enter');
+   assert.equal(await menu.getAttribute('aria-expanded'),'true');
+   const nav=b.getByRole('navigation',{name:'Main navigation'});
+   assert.equal(await nav.getByRole('button').count(),8);
+   await b.keyboard.press('Tab');
+   await b.keyboard.press('Escape');
+   assert.equal(await menu.getAttribute('aria-expanded'),'false');
+   assert.equal(await menu.evaluate(element=>document.activeElement===element),true);
+   await b.setViewportSize({width:320,height:780});
+   assert.ok(await b.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),'Shared community fits 320px');
    for(const page of [a,b]){
-    await page.getByRole('button',{name:'Shared events',exact:true}).click();
+    await navigate(page,'Shared events');
     await page.getByRole('heading',{name:'Upcoming events'}).waitFor();
    }
    await a.getByText('Create an event or plan',{exact:true}).click();
    const start=new Date(Date.now()+86400000);
    const local=new Date(start.getTime()-start.getTimezoneOffset()*60000).toISOString().slice(0,16);
-   await a.getByLabel('Title',{exact:true}).fill('Browser concert');
+   await a.getByLabel('Title',{exact:true}).fill('Browser concert ' + 'x'.repeat(95));
    await a.getByLabel('Start time in your local timezone').fill(local);
    await a.getByLabel('Venue',{exact:true}).fill('Concert Hall');
    await a.getByRole('button',{name:'Publish event'}).click();
@@ -77,6 +94,8 @@ export async function socialBrowserChecks(t,pool){
    const concert=b.getByRole('article').filter({hasText:'Browser concert'});
    await concert.getByRole('button',{name:'RSVP',exact:true}).click();
    await concert.getByRole('button',{name:'Cancel RSVP'}).waitFor();
+   assert.ok(await b.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),'Shared events fit 320px with long titles');
+   await b.screenshot({path:'artifacts/shared-events-mobile.png',fullPage:true});
    await b.reload();
    await concert.getByRole('button',{name:'Cancel RSVP'}).waitFor();
    await a.getByLabel('Type',{exact:true}).selectOption('plans');
@@ -108,7 +127,7 @@ export async function socialBrowserChecks(t,pool){
    await a.getByLabel('Description',{exact:true}).fill('Photography for concerts and meetups.');
    await a.getByRole('button',{name:'Publish service',exact:true}).click();
    await a.getByText('Service published.',{exact:true}).waitFor();
-   await b.getByRole('button',{name:'Find talent',exact:true}).click();
+   await navigate(b,'Find talent');
    const service=b.getByRole('heading',{name:serviceTitle,exact:true});
    await service.waitFor();
    assert.match(await b.locator('.demo-banner').innerText(),/SHARED WORKSPACE/);
@@ -128,7 +147,7 @@ export async function socialBrowserChecks(t,pool){
    await service.waitFor();
    await b.getByText('1 service found.',{exact:true}).waitFor();
    assert.equal(await b.getByRole('button',{name:'Withdraw '+serviceTitle,exact:true}).count(),0);
-   await b.getByRole('button',{name:'Shared community',exact:true}).click();
+   await navigate(b,'Shared community');
    await b.getByRole('button',{name:'Sign out',exact:true}).click();
    await b.getByRole('heading',{name:'Join your community',exact:true}).waitFor();
    assert.equal(await b.getByText('Persistent browser community post <b>literal</b>',{exact:true}).count(),0);
