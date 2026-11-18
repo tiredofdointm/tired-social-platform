@@ -43,6 +43,14 @@ try {
  await page.waitForFunction(()=>document.body.dataset.accent==='lime');
  await page.getByRole('button',{name:'Customize',exact:true}).click();
  assert.equal(await page.getByLabel('Accent',{exact:true}).inputValue(),'lime');
+ await page.getByLabel('Display name',{exact:true}).fill('Unsaved profile edit');
+ await page.getByLabel('Accent',{exact:true}).selectOption('violet');
+ await page.waitForFunction(()=>document.body.dataset.accent==='violet');
+ await page.getByRole('button',{name:'Discard appearance changes',exact:true}).click();
+ await page.waitForFunction(()=>document.body.dataset.accent==='lime');
+ assert.equal(await page.getByLabel('Accent',{exact:true}).inputValue(),'lime');
+ assert.equal(await page.getByLabel('Display name',{exact:true}).inputValue(),'Unsaved profile edit');
+ await page.getByLabel('Display name',{exact:true}).fill('Returning user');
  await page.getByLabel('Theme',{exact:true}).selectOption('light');
  await page.getByRole('button',{name:'Save changes',exact:true}).click();
  assert.equal(await page.locator('body').getAttribute('data-theme'),'light');
