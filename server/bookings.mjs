@@ -1,13 +1,23 @@
-export async function bookingRoutes({pool, actor, path, method, req, send, fail, readJson, fields, uuid}) {
+export function sandboxBookingFee(connect, env=process.env){
+  const value=env.STRIPE_BOOKING_TEST_FEE_BPS;
+  if(!connect || value===undefined)return null;
+  if(!/^\d{1,5}$/.test(value) || Number(value)>10000)throw Error('Invalid sandbox booking fee');
+  return Number(value);
+}
+
+export async function bookingRoutes({pool, actor, path, method, req, send, fail, readJson, fields, uuid, bookingFeeBps=null}) {
   const base = '/api/v1/services';
   if (path === base + '/bookings' && method === 'GET') {
     const {rows} = await pool.query(`SELECT s.request_id, s.starts_at, s.confirmed, l.title,
+      CASE WHEN $2::boolean AND s.quoted_service_cents IS NOT NULL THEN json_build_object(
+        'serviceCents',s.quoted_service_cents,'feeCents',s.quoted_fee_cents,
+        'totalCents',s.quoted_service_cents+s.quoted_fee_cents) END AS quote,
       s.provider_id=$1 AS provider, p.display_name AS counterpart
       FROM service_slots s JOIN service_listings l ON l.id=s.listing_id
       JOIN profiles p ON p.user_id=CASE WHEN s.provider_id=$1 THEN s.customer_id ELSE s.provider_id END
       WHERE s.customer_id IS NOT NULL AND $1 IN (s.provider_id,s.customer_id)
-      AND s.starts_at + interval '1 hour' > now() ORDER BY s.starts_at`, [actor]);
-    send(200, {bookings:rows});
+      AND s.starts_at + interval '1 hour' > now() ORDER BY s.starts_at`, [actor,bookingFeeBps!==null]);
+    send(200, {bookings:rows,quotesEnabled:bookingFeeBps!==null});
     return true;
   }
   const match = /^\/api\/v1\/services\/(listings|slots|bookings)\/([^/]+)\/(availability|request|remove|confirm|cancel)$/.exec(path);
@@ -36,9 +46,25 @@ export async function bookingRoutes({pool, actor, path, method, req, send, fail,
   } else if (resource === 'slots' && action === 'remove') {
     result = await pool.query('DELETE FROM service_slots WHERE id=$2 AND provider_id=$1 AND customer_id IS NULL RETURNING id',[actor,id]);
   } else if (resource === 'bookings' && action === 'confirm') {
-    result = await pool.query('UPDATE service_slots SET confirmed=true WHERE request_id=$2 AND provider_id=$1 AND starts_at>now() RETURNING request_id',[actor,id]);
+    const body=req.headers['transfer-encoding'] || Number(req.headers['content-length'])>0 ? await readJson(req) : {};
+    fields(body,['servicePriceCents']);
+    const price=body.servicePriceCents??null;
+    let fee=null;
+    if(price!==null){
+      if(bookingFeeBps===null)fail(503,'sandbox_booking_quotes_unavailable');
+      if(!Number.isInteger(price) || price<50 || price>99999999)fail(400,'invalid_service_price');
+      fee=Math.floor((price*bookingFeeBps+5000)/10000);
+      if(price+fee>99999999)fail(400,'booking_total_too_high');
+    }
+    result=await pool.query(`UPDATE service_slots SET confirmed=true,
+      quoted_service_cents=CASE WHEN confirmed THEN quoted_service_cents ELSE $3::int END,
+      quoted_fee_cents=CASE WHEN confirmed THEN quoted_fee_cents ELSE $4::int END
+      WHERE request_id=$2 AND provider_id=$1 AND starts_at>now()
+      AND (NOT confirmed OR $3::int IS NULL OR quoted_service_cents=$3)
+      RETURNING request_id`,[actor,id,price,fee]);
   } else if (resource === 'bookings' && action === 'cancel') {
-    result = await pool.query(`UPDATE service_slots SET confirmed=false, customer_id=NULL, request_id=NULL
+    result = await pool.query(`UPDATE service_slots SET confirmed=false, customer_id=NULL, request_id=NULL,
+        quoted_service_cents=NULL, quoted_fee_cents=NULL
       WHERE request_id=$2 AND $1 IN (provider_id,customer_id) AND starts_at>now() RETURNING id`,[actor,id]);
   } else return false;
   if (!result.rowCount) fail(409,'unavailable');
