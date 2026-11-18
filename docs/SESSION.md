@@ -352,5 +352,11 @@ keyboard-scrollable event table with row and column headings. Settings and
 Studio drop the unused search field. Narrow layouts wrap long user content,
 and accent text in light mode has separate contrast-tested colors.
 
-Next: review the Chromium screenshots for Discover, Feed, Plans, Studio, and
-Settings, and verify platform and progress CI before staging this UI-only change.
+Reviewed light-mode desktop and 320px screenshots of all five preview pages.
+The 320px review prompted smaller text for the Discover hero and Studio's
+connection status. Chromium checks cover 320px, 768px, and 1440px, including
+long sample content, selected filters, dialog focus, keyboard table scrolling,
+and light-mode accent contrast.
+
+Next: confirm CI on the final PR #3 revision, then stage and smoke-test this
+UI-only update before promotion. No database migration is required.

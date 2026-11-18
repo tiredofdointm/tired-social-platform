@@ -5,7 +5,7 @@
   "currentSession": {
     "primaryTask": "U02",
     "nextTask": "U02",
-    "reason": "Verify the preview workspace accessibility fixes in Chromium at narrow and desktop widths before staging."
+    "reason": "Stage the preview workspace accessibility update after final Chromium verification."
   },
   "workInProgressLimit": 1,
   "tasks": [
@@ -122,7 +122,10 @@
         "https://github.com/tiredofdointm/tired-social-platform/actions/runs/44219877901",
         "https://github.com/tiredofdointm/tired-social-platform/pull/2",
         "https://console.cloud.google.com/cloud-build/builds/f1a154b1-45df-4db0-ac8a-e522c6381bfd?project=tired-social-platform",
-        "https://tired.events/api/health"
+        "https://tired.events/api/health",
+        "https://github.com/tiredofdointm/tired-social-platform/pull/3",
+        "https://github.com/tiredofdointm/tired-social-platform/actions/runs/44226766018",
+        "https://github.com/tiredofdointm/tired-social-platform/actions/runs/44226765928"
       ],
       "workstream": "U"
     },
