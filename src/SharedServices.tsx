@@ -25,7 +25,10 @@ async function get<T>(resource:string, signal:AbortSignal):Promise<T> {
   return response.json();
 }
 
-export function SharedServices({preview}:{preview:ReactNode}) {
+export function SharedServices({preview, onPreviewMode}:{
+  preview:ReactNode;
+  onPreviewMode:(preview:boolean)=>void;
+}) {
   const [view, setView] = useState<View>({kind:'loading'});
   const [refresh, setRefresh] = useState(0);
   const [category, setCategory] = useState('All categories');
@@ -40,6 +43,7 @@ export function SharedServices({preview}:{preview:ReactNode}) {
       try {
         const config = await get<{mode:string}>('auth/config', signal);
         if (signal.aborted) return;
+        onPreviewMode(config.mode === 'preview');
         if (config.mode === 'preview') {
           setView({kind:'preview'});
           return;
@@ -65,7 +69,7 @@ export function SharedServices({preview}:{preview:ReactNode}) {
       controller.abort();
       window.removeEventListener('tired-account-change', accountChanged);
     };
-  }, [refresh]);
+  }, [refresh, onPreviewMode]);
 
   async function change(path:string, method:string, body:unknown, success:(result:{publication?:Publication})=>string) {
     if (view.kind !== 'ready' || busy) return false;
@@ -125,7 +129,7 @@ export function SharedServices({preview}:{preview:ReactNode}) {
     (category === 'All categories' || item.category === category) &&
     [item.title, item.description, item.display_name, item.handle].some(value => value.toLowerCase().includes(search)));
 
-  return <section className="shared-community stack">
+  return <section className="shared-community provider-directory stack">
     <h1>Find talent</h1>
     <p role="status">{message}</p>
     <details className="panel">
@@ -162,7 +166,7 @@ export function SharedServices({preview}:{preview:ReactNode}) {
         </div>
       </article>)}
     </section>}
-    <div className="filters">
+    <div className="filters provider-filters">
       <label>Search services<input type="search" value={query} onChange={event => setQuery(event.target.value)}/></label>
       <label>Category<select value={category} onChange={event => setCategory(event.target.value)}>
         {['All categories', ...categories].map(item => <option key={item}>{item}</option>)}
@@ -172,6 +176,8 @@ export function SharedServices({preview}:{preview:ReactNode}) {
       <span className="eyebrow">{item.category}</span><h2>{item.title}</h2>
       <p>{item.display_name} · @{item.handle}</p><p className="post-text">{item.description}</p>
     </article>)}</div>
-    {!matches.length && <p>{listings.length ? 'No services match your filters.' : 'No services have been published yet.'}</p>}
+    <p role="status">{matches.length
+      ? `${matches.length} service${matches.length === 1 ? '' : 's'} found.`
+      : listings.length ? 'No services match your filters.' : 'No services have been published yet.'}</p>
   </section>;
 }

@@ -96,20 +96,38 @@ export async function socialBrowserChecks(t,pool){
    await invite.getByRole('button',{name:'Accept invitation'}).click();
    await invite.getByText('Meet at the west gate.').waitFor();
    await a.getByRole('button',{name:'Find talent',exact:true}).click();
-   await a.getByText('List your service',{exact:true}).click();
-   await a.getByLabel('Service title',{exact:true}).fill('Live event photography');
+   const listingForm = a.getByText('List your service',{exact:true});
+   await listingForm.focus();
+   await a.keyboard.press('Tab');
+   await a.keyboard.press('Shift+Tab');
+   assert.equal(await listingForm.evaluate(element=>getComputedStyle(element).outlineStyle),'solid');
+   await listingForm.press('Enter');
+   const serviceTitle = 'Photography ' + 'x'.repeat(100);
+   await a.getByLabel('Service title',{exact:true}).fill(serviceTitle);
    await a.locator('select[name="category"]').selectOption('Photography');
    await a.getByLabel('Description',{exact:true}).fill('Photography for concerts and meetups.');
    await a.getByRole('button',{name:'Publish service',exact:true}).click();
    await a.getByText('Service published.',{exact:true}).waitFor();
    await b.getByRole('button',{name:'Find talent',exact:true}).click();
-   const service=b.getByRole('heading',{name:'Live event photography',exact:true});
+   const service=b.getByRole('heading',{name:serviceTitle,exact:true});
    await service.waitFor();
+   assert.match(await b.locator('.demo-banner').innerText(),/SHARED WORKSPACE/);
+   assert.equal(await b.getByRole('button',{name:'+ Create',exact:true}).count(),0);
+   assert.equal(await b.getByRole('searchbox').count(),1);
+   for(const width of [320,390,768,1440]){
+    await b.setViewportSize({width,height:850});
+    assert.ok(await b.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),
+      'Provider directory fits viewport width ' + width);
+   }
+   await b.screenshot({path:'artifacts/providers-desktop.png',fullPage:true});
+   await b.setViewportSize({width:390,height:844});
+   await b.screenshot({path:'artifacts/providers-mobile.png',fullPage:true});
    await b.getByLabel('Search services',{exact:true}).fill('lighting');
    await service.waitFor({state:'hidden'});
    await b.getByLabel('Search services',{exact:true}).fill('concerts');
    await service.waitFor();
-   assert.equal(await b.getByRole('button',{name:'Withdraw Live event photography',exact:true}).count(),0);
+   await b.getByText('1 service found.',{exact:true}).waitFor();
+   assert.equal(await b.getByRole('button',{name:'Withdraw '+serviceTitle,exact:true}).count(),0);
    await b.getByRole('button',{name:'Shared community',exact:true}).click();
    await b.getByRole('button',{name:'Sign out',exact:true}).click();
    await b.getByRole('heading',{name:'Join your community',exact:true}).waitFor();
