@@ -1,4 +1,5 @@
-import type {State, Post, FeedMode, EventListing, Quote} from './types';
+import type {State, Post, FeedMode, EventListing, Quote, Preferences} from './types';
+export const DEFAULT_APPEARANCE = {theme:'dark',accent:'lime',density:'comfortable',motion:true} satisfies Omit<Preferences,'review'>;
 export const STORAGE_KEY = 'tired-social-v1';
 export function rankPosts(posts: Post[], following: string[], mode: FeedMode='for-you'): Post[] {
  const list = mode === 'following' ? posts.filter(p => following.includes(p.author) || p.author === 'You') : [...posts];
@@ -24,7 +25,7 @@ export function validateEvent(e: Pick<EventListing,'title'|'location'|'date'|'pr
 export function makeSeed(now=Date.now()): State {
  const day=(n:number)=>new Date(now+n*86400000).toISOString().slice(0,10);
  return {
- version:1, prefs:{theme:'dark',accent:'lime',density:'comfortable',motion:true,review:false},
+ version:1, prefs:{...DEFAULT_APPEARANCE,review:false},
  profile:{name:'You',bio:'Here for good people and unforgettable nights.'},
  following:[], saved:[], attending:[], bookings:[], plans:[],
  events:[
