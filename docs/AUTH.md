@@ -7,7 +7,7 @@ The shared community screen uses the authenticated social API; the original demo
 ## Activation
 1. Provision the dedicated PostgreSQL database and restrict connectivity to the service.
 2. Supply DATABASE_URL securely to the migration job and run `npm run db:migrate`.
-   This applies immutable migrations 001 and 002. Never run database tests on this database.
+   This applies all pending immutable migrations. Never run database tests on this database.
 3. Create a Google Web OAuth client. Register exactly
    `https://<verified-host>/auth/google/callback` as an authorized redirect URI.
 4. Supply AUTH_MODE=google, PUBLIC_ORIGIN=https://<verified-host>, GOOGLE_CLIENT_ID,
@@ -27,6 +27,8 @@ Cloud Run health JSON includes K_REVISION when the runtime supplies it.
 ## Security contract
 - Authorization-code flow uses state, nonce and PKCE S256. Attempts expire in ten
   minutes and are atomically consumed, bound to a Secure browser cookie.
+  Tabs reuse that cookie while each sign-in has its own one-time state, nonce and PKCE verifier.
+  Migration 014 stores the allow-listed return page for each attempt.
 - Google Auth Library verifies the ID token signature, issuer, audience and time
   claims. The application additionally verifies nonce, authorized party, verified
   email and a nonempty subject. The immutable issuer/subject identifies an account.
@@ -39,7 +41,8 @@ Cloud Run health JSON includes K_REVISION when the runtime supplies it.
   Every future state-changing API must reuse equivalent authorization/CSRF checks;
   the shared social HTTP handler applies these checks to its mutation routes.
 - Auth responses are not cached. Errors do not reveal provider tokens or database
-  details. Per-instance login caps are only a baseline: configure production edge
+  details. Browser errors link to a clean sign-in attempt and OAuth pages suppress referrers.
+  Per-instance login caps are only a baseline: configure production edge
   rate limiting and expired-session maintenance before launch.
 
 ## Verification and remaining gates
@@ -51,5 +54,4 @@ rotation, CSRF, expiry, suspension and logout. Its provider exchange is mocked.
 `npm run test:browser` covers account UI states using mocked HTTP alongside the
 existing real browser preview journeys. These are not live Google OAuth evidence.
 
-Live database provisioning, OAuth client configuration, real provider sign-in,
-Google Cloud health verification and live shared-community activation remain pending.
+Google sign-in and the shared community are active on the deployed Cloud Run service. Two independent Google accounts completed the signed-in booking journey on the tagged staging revision. See [SESSION.md](SESSION.md) for release checkpoints. Verify the new return-page and retry flows on staging after applying migration 014.
