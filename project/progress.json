@@ -3,9 +3,9 @@
   "updated": "2026-11-17",
   "objective": "Independent Google Cloud social/events/talent platform; no Laravel; customizable UI and verified production journeys.",
   "currentSession": {
-    "primaryTask": "M01",
-    "nextTask": "M01",
-    "reason": "Apply migration 006 and verify the merged booking release in production."
+    "primaryTask": null,
+    "nextTask": "T01",
+    "reason": "Implement ticket inventory and test-mode checkout with reservation and webhook reconciliation tests."
   },
   "workInProgressLimit": 1,
   "tasks": [
@@ -277,7 +277,7 @@
     {
       "id": "T01",
       "title": "Inventory, ticket checkout and webhook reconciliation",
-      "status": "backlog",
+      "status": "ready",
       "priority": 1,
       "dependsOn": [
         "E02"
@@ -301,7 +301,7 @@
     {
       "id": "M01",
       "title": "Provider profiles, services and booking availability",
-      "status": "verification",
+      "status": "done",
       "priority": 1,
       "dependsOn": [
         "E02"
@@ -310,7 +310,8 @@
       "evidence": [
         "https://github.com/tiredofdointm/tired-social-platform/pull/4",
         "https://github.com/tiredofdointm/tired-social-platform/actions/runs/44242502716",
-        "https://github.com/tiredofdointm/tired-social-platform/actions/runs/44242502825"
+        "https://github.com/tiredofdointm/tired-social-platform/actions/runs/44242502825",
+        "https://tired.events/api/health"
       ],
       "workstream": "M"
     },
