@@ -285,6 +285,9 @@ export async function socialHttpChecks(t,pool){
    assert.equal((await request(alice,'events/publishing','PUT',{manualReview:true})).status,200);
    const pendingEvent=(await request(bob,'events','POST',{title:'Review show',venue:'Main Hall',capacity:2,startsAt})).data;
    assert.equal(pendingEvent.publication,'pending');
+   assert.equal((await request(alice,'events?event=invalid')).status,400);
+   assert.ok(!(await request(alice,'events?event='+pendingEvent.id)).data.events.some(row=>row.id===pendingEvent.id));
+
    assert.equal((await request(bob,'events/'+pendingEvent.id+'/rsvp','PUT')).status,404);
    const reviewPath='events/'+pendingEvent.id+'/review';
    assert.equal((await request(bob,reviewPath,'PUT',{decision:'published'})).status,404);

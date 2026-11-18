@@ -1,4 +1,5 @@
-import {useEffect,useState} from 'react';
+import {rememberEventForSignIn} from './sharedEventLink';
+import {useEffect,useRef,useState} from 'react';
 import type {FormEvent} from 'react';
 
 type Event = {id:string;title:string;venue:string;starts_at:string;capacity:number;attending:number;going:boolean;ticket_price_cents:number|null;held:number;my_hold_until:string|null;ticket_state:string|null;owner:boolean;upcoming:boolean;my_ticket_code:string|null;my_checked_in_at:string|null};
@@ -6,7 +7,8 @@ type Plan = {id:string;title:string;details:string|null;starts_at:string|null;ow
 
 type Publishing={manual_review:boolean;admin:boolean;submissions:(Event&{publication:string})[]};
 
-export function SharedEvents(){
+export function SharedEvents({linkedId}:{linkedId:string|null}){
+ const linkedHeading=useRef<HTMLHeadingElement>(null);
  const [publishing,setPublishing]=useState<Publishing|null>(null);
  const [events,setEvents]=useState<Event[]>([]);
  const [checkoutEnabled,setCheckoutEnabled]=useState(false);
@@ -27,7 +29,7 @@ export function SharedEvents(){
   return data;
  }
  async function refresh(){
-  const [eventList,planList,policy]=await Promise.all([api<{events:Event[];checkoutEnabled:boolean}>('events'),api<{plans:Plan[]}>('plans'),api<Publishing>('events/publishing')]);
+  const [eventList,planList,policy]=await Promise.all([api<{events:Event[];checkoutEnabled:boolean}>('events'+(linkedId?'?event='+linkedId:'')),api<{plans:Plan[]}>('plans'),api<Publishing>('events/publishing')]);
   setCheckoutEnabled(eventList.checkoutEnabled);
   setEvents(eventList.events);
   setPlans(planList.plans);
@@ -50,6 +52,14 @@ export function SharedEvents(){
   window.addEventListener('tired-account-change',signedOut);
   return ()=>window.removeEventListener('tired-account-change',signedOut);
  },[]);
+ useEffect(()=>{
+  if(state==='ready')linkedHeading.current?.focus();
+ },[state]);
+ async function shareEvent(id:string){
+  const url=new URL('/#shared-events/'+id,location.origin).href;
+  try{await navigator.clipboard.writeText(url);setMessage('Event link copied.');}
+  catch{setMessage('Copy this event link manually: '+url);}
+ }
  async function action(work:()=>Promise<unknown>,success:string){
   setBusy(true);setMessage('');
   try{const result=await work();await refresh();setMessage(typeof result==='string'?result:success);}
@@ -73,12 +83,12 @@ export function SharedEvents(){
  }
  if(state==='loading')return <p role="status">Loading events and plans…</p>;
  if(state==='preview')return <section className="panel"><h1>Shared events and plans</h1><p>Shared access is pending cloud setup.</p><a href="#discover">Explore the event preview</a></section>;
- if(state==='signed-out')return <section className="panel"><h1>Shared events and plans</h1><a href="/auth/google?next=shared-events">Sign in with Google</a></section>;
+ if(state==='signed-out')return <section className="panel"><h1>Shared events and plans</h1><a href="/auth/google?next=shared-events" onClick={rememberEventForSignIn}>Sign in with Google</a></section>;
  if(state==='error')return <section className="panel"><p role="alert">{message}</p><button onClick={()=>void load()}>Retry</button></section>;
 
  return <section className="shared-community">
   <h1>Shared events and plans</h1>
-  <p role="status">{message}</p>
+  <p className="post-text" role="status">{message}</p>
   <details className="panel"><summary>Create an event or plan</summary>
    <form onSubmit={create}>
     <label>Type<select aria-label="Type" value={kind} onChange={event=>setKind(event.target.value)}><option value="events">Community event</option><option value="plans">Private friend plan</option></select></label>
@@ -112,8 +122,9 @@ export function SharedEvents(){
    </article>)}
   </section>}
   <h2>{events.some(event=>!event.upcoming)?'Events and active tickets':'Upcoming events'}</h2>
+  {linkedId&&!events.some(event=>event.id===linkedId)&&<p role="status">This event is unavailable. Browse upcoming events below.</p>}
   <div className="stack">{events.map(event=><article className="panel" key={event.id}>
-   <h3 id={`event-title-${event.id}`}>{event.title}</h3><p>{event.venue} · {new Date(event.starts_at).toLocaleString()}</p>
+   <h3 id={`event-title-${event.id}`} ref={event.id===linkedId?linkedHeading:undefined} tabIndex={event.id===linkedId?-1:undefined}>{event.title}</h3><p>{event.venue} · {new Date(event.starts_at).toLocaleString()}</p>
    {event.ticket_price_cents!=null ? <>
     <p>Test ticket · ${(event.ticket_price_cents/100).toFixed(2)} · {event.capacity-event.held} available</p>
     {event.my_hold_until && <p>Held until {new Date(event.my_hold_until).toLocaleTimeString()}.</p>}
@@ -142,6 +153,7 @@ export function SharedEvents(){
    <button aria-describedby={`event-title-${event.id}`} disabled={busy||(!event.going&&event.attending>=event.capacity)} onClick={()=>void action(
     ()=>api('events/'+event.id+'/rsvp',event.going?'DELETE':'PUT'),event.going?'RSVP canceled.':'RSVP saved.'
    )}>{event.going?'Cancel RSVP':event.attending>=event.capacity?'Event full':'RSVP'}</button></>}
+   {event.upcoming&&<button type="button" className="ghost" aria-describedby={`event-title-${event.id}`} onClick={()=>void shareEvent(event.id)}>Copy event link</button>}
   </article>)}</div>
   {!events.length&&<p>No upcoming events.</p>}
   <h2>Private friend plans</h2>
@@ -201,7 +213,7 @@ function OrganizerTickets({eventId,api}:{eventId:string;api:<T>(path:string,meth
    <label>Guest ticket code<input name="code" required maxLength={36} autoComplete="off"/></label>
    <button disabled={busy}>Check in guest</button>
   </form>
-  <p role="status">{message}</p>
+  <p className="post-text" role="status">{message}</p>
   {list && <>
    <p>{list.totals.checked_in} of {list.totals.issued} guests checked in · ${(Number(list.totals.net_cents)/100).toFixed(2)} net test sales</p>
    {list.guests.length?<ul>{list.guests.map(guest=><li key={guest.order_id}>

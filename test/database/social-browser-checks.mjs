@@ -106,6 +106,18 @@ export async function socialBrowserChecks(t,pool){
    await a.getByLabel('Venue',{exact:true}).fill('Concert Hall');
    await a.getByRole('button',{name:'Publish event'}).click();
    await a.getByText('Event published.',{exact:true}).waitFor();
+   await a.context().grantPermissions(['clipboard-read','clipboard-write'],{origin:config.origin});
+   const publishedConcert=a.getByRole('article').filter({hasText:'Browser concert'});
+   await publishedConcert.getByRole('button',{name:'Copy event link',exact:true}).click();
+   await a.getByText('Event link copied.',{exact:true}).waitFor();
+   const eventUrl=await a.evaluate(()=>navigator.clipboard.readText());
+   assert.match(new URL(eventUrl).hash,/^#shared-events\/[0-9a-f-]{36}$/);
+   await b.goto(eventUrl);
+   await b.waitForFunction(()=>document.activeElement?.textContent?.startsWith('Browser concert'));
+   await b.goto(config.origin+'/#shared-events/00000000-0000-0000-0000-000000000000');
+   await b.getByText('This event is unavailable. Browse upcoming events below.',{exact:true}).waitFor();
+   await navigate(b,'Shared events');
+
    await b.getByRole('button',{name:'Refresh lists'}).click();
    const concert=b.getByRole('article').filter({hasText:'Browser concert'});
    await concert.getByRole('button',{name:'RSVP',exact:true}).click();

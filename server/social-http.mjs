@@ -43,7 +43,7 @@ export function createSocialHandler({config,pool,payments=testPayments(),connect
     if(Date.now()-windowStart>=60000){windowStart=Date.now();writes=0;}if(++writes>300)fail(429,'rate_limited');
    }
    if(/^\/api\/v1\/(events|plans)(\/|$)/.test(path)){
-    await eventsPlans({pool,payments,origin:config.origin,actor,path,method,req,send,fail,readJson,fields,text,uuid});
+    await eventsPlans({pool,payments,origin:config.origin,actor,path,method,req,send,fail,readJson,fields,text,uuid,linkedEvent:url.searchParams.get('event')});
     return true;
    }
    if(path==='/api/v1/services/connect/payouts'){
