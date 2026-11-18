@@ -1,3 +1,4 @@
+import {rememberEventForSignIn} from './sharedEventLink';
 import {useEffect,useState} from 'react';
 type Account={user:{display_name:string},csrfToken:string};
 export function AccountControl({page}:{page:string}){
@@ -26,6 +27,6 @@ export function AccountControl({page}:{page:string}){
  }
  if(mode==='preview'||mode==='loading')return null;
  if(mode==='error')return <button onClick={()=>void load()}>Retry account connection</button>;
- if(!account)return <a className="primary" href={'/auth/google?next='+encodeURIComponent(page)}>Sign in with Google</a>;
+ if(!account)return <a className="primary" href={'/auth/google?next='+encodeURIComponent(page)} onClick={rememberEventForSignIn}>Sign in with Google</a>;
  return <div className="account-control"><span>Signed in: {account.user.display_name}</span><button disabled={busy} onClick={()=>void logout()}>{busy?'Signing out…':'Sign out'}</button></div>;
 }
