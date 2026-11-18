@@ -350,8 +350,56 @@ type SandboxPayout = {
  fundingCents:number|null;entries:number|null;reconciliation:string;
 };
 
+type FundedBooking={id:string;title:string;startsAt:string;serviceCents:number};
+type PayoutMatch=
+ | {status:'matched';contributionCents:number;payoutCents:number}
+ | {status:'unverified';payoutsChecked:number}
+ | {status:'adjusted'|'missing_payment'|'mismatch'};
+
+function BookingPayoutCheck({bookings}:{bookings:FundedBooking[]}){
+ const [selected,setSelected]=useState(bookings[0].id);
+ const [message,setMessage]=useState('');
+ const [busy,setBusy]=useState(false);
+
+ async function check(event:FormEvent){
+  event.preventDefault();
+  setBusy(true);
+  setMessage('');
+  try{
+   const result=await get<PayoutMatch>('services/bookings/'+selected+'/payout',new AbortController().signal);
+   switch(result.status){
+    case 'matched':
+     setMessage(`${usd.format(result.contributionCents/100)} from this booking was included in a paid ${usd.format(result.payoutCents/100)} sandbox payout.`);
+     break;
+    case 'unverified':
+     setMessage(result.payoutsChecked===0 ? 'Stripe has no recorded payouts for this provider yet.' :
+      'This booking could not be verified in the most recent sandbox payouts checked ('+result.payoutsChecked+').');
+     break;
+    case 'adjusted': setMessage('This booking has a refund or transfer reversal.'); break;
+    case 'missing_payment': setMessage('Stripe has not supplied the destination payment for this transfer.'); break;
+    case 'mismatch': setMessage('The payout entries do not reconcile with this booking.'); break;
+   }
+  }catch{setMessage('Could not verify this booking. Refresh payouts and try again.');}
+  finally{setBusy(false);}
+ }
+
+ return <form onSubmit={event=>void check(event)}>
+  <label htmlFor="sandbox-paid-booking">Paid booking</label>
+  <select id="sandbox-paid-booking" value={selected} disabled={busy} onChange={event=>{
+   setSelected(event.target.value);
+   setMessage('');
+  }}>
+   {bookings.map(booking=><option key={booking.id} value={booking.id}>
+    {booking.title} · {new Date(booking.startsAt).toLocaleString()} · {usd.format(booking.serviceCents/100)}
+   </option>)}
+  </select>
+  <button disabled={busy}>{busy?'Checking payout…':'Check booking payout'}</button>
+  {message && <p role="status">{message}</p>}
+ </form>;
+}
+
 function SandboxPayouts(){
- type Report={payouts:SandboxPayout[];balance:{availableCents:number;pendingCents:number}};
+ type Report={payouts:SandboxPayout[];balance:{availableCents:number;pendingCents:number};bookings:FundedBooking[]};
  const [report,setReport]=useState<Report|null>(null);
  const payouts=report?.payouts;
  const [message,setMessage]=useState('');
@@ -377,6 +425,7 @@ function SandboxPayouts(){
    <dt>Pending USD balance</dt><dd>{usd.format(report.balance.pendingCents/100)}</dd>
    <dt>Available for payout</dt><dd>{usd.format(report.balance.availableCents/100)}</dd>
   </dl>}
+  {!busy && !!report?.bookings?.length && <BookingPayoutCheck bookings={report.bookings}/>}
   {payouts?.length===0 && <p>No payouts recorded in this sandbox account.</p>}
   {!!payouts?.length && <ul>{payouts.map(payout=>{
    const currency=new Intl.NumberFormat('en-US',{style:'currency',currency:payout.currency});

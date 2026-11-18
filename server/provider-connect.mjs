@@ -1,5 +1,5 @@
 import Stripe from 'stripe';
-import {reconcilePayout, usdBalance} from './payout-report.mjs';
+import {recentPayouts, usdBalance} from './payout-report.mjs';
 import {transaction} from './database.mjs';
 
 export function testConnect(env=process.env){
@@ -48,10 +48,16 @@ export async function providerPayouts({pool,connect,actor,method,send,fail}){
  const {rows:[provider]}=await pool.query('SELECT stripe_account_id FROM provider_connect_accounts WHERE provider_id=$1',[actor]);
  if(!provider)fail(404,'not_found');
 
- const scope={stripeAccount:provider.stripe_account_id};
- const [page,balance]=await Promise.all([connect.payouts.list({limit:5},scope),connect.balance.retrieve({},scope)]);
- if(balance.livemode!==false || page.data.some(payout=>payout.livemode!==false))fail(503,'sandbox_payouts_unavailable');
- const listEntries=params=>connect.balanceTransactions.list(params,scope);
- const payouts=await Promise.all(page.data.map(payout=>reconcilePayout(payout,listEntries)));
- return send(200,{payouts,balance:usdBalance(balance)});
+ const account=provider.stripe_account_id;
+ const [payouts,balance,bookings]=await Promise.all([
+  recentPayouts(connect,account,fail),
+  connect.balance.retrieve({},{stripeAccount:account}),
+  pool.query(`SELECT b.request_id AS id, l.title, s.starts_at AS "startsAt", b.service_cents AS "serviceCents"
+   FROM booking_payments b JOIN service_slots s ON s.request_id=b.request_id
+   JOIN service_listings l ON l.id=s.listing_id
+   WHERE s.provider_id=$1 AND b.destination_account=$2 AND b.state='paid' AND b.refunded_cents=0
+   ORDER BY b.expires_at DESC, b.request_id LIMIT 20`,[actor,account])
+ ]);
+ if(balance.livemode!==false)fail(503,'sandbox_payouts_unavailable');
+ return send(200,{payouts,balance:usdBalance(balance),bookings:bookings.rows});
 }

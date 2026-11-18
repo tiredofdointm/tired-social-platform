@@ -11,10 +11,20 @@ export async function socialBrowserChecks(t,pool){
   const alice=await repo.signIn({issuer:'browser-test',subject:'alice',name:'Browser Alice'});
   const bob=await repo.signIn({issuer:'browser-test',subject:'bob',name:'Browser Bob'});
   let pending = 10000;
+  let payoutPaid = false;
+  let pastBooking;
   const connect = {
    accounts:{retrieve:async()=>({capabilities:{transfers:'active'},payouts_enabled:true,details_submitted:true})},
    balance:{retrieve:async()=>({livemode:false,pending:[{currency:'usd',amount:pending}],available:[{currency:'usd',amount:10000-pending}]})},
-   payouts:{list:async()=>({data:[]})}
+   payouts:{list:async()=>({data:payoutPaid ? [{id:'po_browser',livemode:false,automatic:true,type:'bank_account',
+    currency:'usd',amount:12000,status:'paid',reconciliation_status:'completed',arrival_date:1800000000}] : []})},
+   paymentIntents:{retrieve:async()=>({livemode:false,status:'succeeded',currency:'usd',amount_received:10750,
+    metadata:{tired_booking:pastBooking},latest_charge:{id:'ch_browser',livemode:false,paid:true,amount:10750,transfer:'tr_browser',amount_refunded:0}})},
+   transfers:{retrieve:async()=>({source_transaction:'ch_browser',currency:'usd',livemode:false,
+    destination:'acct_browserProvider',destination_payment:'py_browser',amount:10000,amount_reversed:0})},
+   balanceTransactions:{list:async()=>({has_more:false,data:[
+    {id:'txn_service',source:'py_browser',currency:'usd',net:10000},{id:'txn_other',source:'py_other',currency:'usd',net:2000}
+   ]})}
   };
   const server=createServer({auth:createAuthHandler({config,pool,provider:{}}),social:createSocialHandler({config,pool,connect,payments:{},bookingFeeBps:750})});
   await new Promise(r=>server.listen(0,'127.0.0.1',r));config.origin=`http://127.0.0.1:${server.address().port}`;
@@ -165,6 +175,13 @@ export async function socialBrowserChecks(t,pool){
    await a.getByRole('button',{name:'Publish service',exact:true}).click();
    await a.getByText('Service published.',{exact:true}).waitFor();
    await pool.query("INSERT INTO provider_connect_accounts(provider_id,stripe_account_id) VALUES($1,'acct_browserProvider')",[alice.userId]);
+   const historical=await pool.query(`INSERT INTO service_slots(listing_id,provider_id,starts_at,customer_id,request_id,
+     confirmed,quoted_service_cents,quoted_fee_cents,payment_locked)
+     SELECT id,$1,date_trunc('hour',now())-interval '3 days',$2,gen_random_uuid(),true,10000,750,true
+     FROM service_listings WHERE owner_id=$1 AND title=$3 RETURNING request_id`,[alice.userId,bob.userId,serviceTitle]);
+   pastBooking=historical.rows[0].request_id;
+   await pool.query(`INSERT INTO booking_payments(request_id,destination_account,service_cents,fee_cents,
+    expires_at,payment_id,state) VALUES($1,'acct_browserProvider',10000,750,now()-interval '3 days','pi_browser','paid')`,[pastBooking]);
    await a.reload();
    await a.getByText('Sandbox payouts',{exact:true}).click();
    await a.getByRole('button',{name:'Load payouts',exact:true}).click();
@@ -172,10 +189,16 @@ export async function socialBrowserChecks(t,pool){
    await balances.getByText('$100.00',{exact:true}).waitFor();
    assert.deepEqual(await balances.locator('dd').allTextContents(),['$100.00','$0.00']);
    await a.getByText('No payouts recorded in this sandbox account.',{exact:true}).waitFor();
+   await a.getByRole('button',{name:'Check booking payout'}).click();
+   await a.getByText('Stripe has no recorded payouts for this provider yet.').waitFor();
+   assert.equal(await a.getByLabel('Paid booking',{exact:true}).inputValue(),pastBooking);
    pending=0;
    await a.getByRole('button',{name:'Refresh payouts',exact:true}).click();
    await balances.locator('dd').nth(1).filter({hasText:'$100.00'}).waitFor();
    assert.deepEqual(await balances.locator('dd').allTextContents(),['$0.00','$100.00']);
+   payoutPaid=true;
+   await a.getByRole('button',{name:'Check booking payout'}).click();
+   await a.getByText('$100.00 from this booking was included in a paid $120.00 sandbox payout.').waitFor();
    await navigate(b,'Find talent');
    const service=b.getByRole('heading',{name:serviceTitle,exact:true});
    await service.waitFor();
