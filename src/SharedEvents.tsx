@@ -86,7 +86,7 @@ export function SharedEvents(){
     <label>Start time in your local timezone<input name="startsAt" type="datetime-local" required/></label>
     {kind==='events'?<>
      <label>Venue<input name="venue" required maxLength={160}/></label>
-     <label>Test ticket price (USD, optional)<input name="price" type="number" step="0.01" min="0.50" max="999999.99"/></label>
+     {checkoutEnabled && <label>Test ticket price (USD, optional)<input name="price" type="number" step="0.01" min="0.50" max="999999.99"/></label>}
      <label>Capacity<input name="capacity" required type="number" min={1} max={10000} defaultValue={20}/></label>
     </>:<label>Meetup details<textarea name="details" required maxLength={1000}/></label>}
     <button className="primary" disabled={busy}>{kind==='events'?(publishing?.manual_review?'Submit event for review':'Publish event'):'Create private plan'}</button>
