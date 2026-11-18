@@ -1,11 +1,11 @@
 {
   "version": 1,
-  "updated": "2026-11-17",
+  "updated": "2026-11-18",
   "objective": "Independent Google Cloud social/events/talent platform; no Laravel; customizable UI and verified production journeys.",
   "currentSession": {
     "primaryTask": null,
-    "nextTask": "T01",
-    "reason": "Verify ticket checkout with a real Stripe sandbox purchase and refund after the reservation and webhook integration checks."
+    "nextTask": "T02",
+    "reason": "Implement event-owner guest lists and single-use ticket check-in in the sandbox."
   },
   "workInProgressLimit": 1,
   "tasks": [
@@ -277,19 +277,24 @@
     {
       "id": "T01",
       "title": "Inventory, ticket checkout and webhook reconciliation",
-      "status": "in_progress",
+      "status": "done",
       "priority": 1,
       "dependsOn": [
         "E02"
       ],
       "acceptance": "Test checkout issues tickets once; concurrent reservations do not oversell; refunds reconcile.",
-      "evidence": [],
+      "evidence": [
+        "https://github.com/tiredofdointm/tired-social-platform/pull/5",
+        "https://github.com/tiredofdointm/tired-social-platform/actions/runs/44272644575",
+        "https://github.com/tiredofdointm/tired-social-platform/pull/6",
+        "https://tired.events/api/health"
+      ],
       "workstream": "T"
     },
     {
       "id": "T02",
       "title": "Organizer ticket operations",
-      "status": "backlog",
+      "status": "ready",
       "priority": 1,
       "dependsOn": [
         "T01"
