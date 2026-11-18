@@ -10,7 +10,7 @@ export async function socialBrowserChecks(t,pool){
   const config={origin:''},repo=authRepository(pool);
   const alice=await repo.signIn({issuer:'browser-test',subject:'alice',name:'Browser Alice'});
   const bob=await repo.signIn({issuer:'browser-test',subject:'bob',name:'Browser Bob'});
-  const server=createServer({auth:createAuthHandler({config,pool,provider:{}}),social:createSocialHandler({config,pool,payments:{}})});
+  const server=createServer({auth:createAuthHandler({config,pool,provider:{}}),social:createSocialHandler({config,pool,payments:{},bookingFeeBps:750})});
   await new Promise(r=>server.listen(0,'127.0.0.1',r));config.origin=`http://127.0.0.1:${server.address().port}`;
   let browser;
   try{
@@ -190,10 +190,13 @@ export async function socialBrowserChecks(t,pool){
    await customerCard.getByRole('button',{name:'Request time'}).click();
    await b.getByText('Awaiting provider approval',{exact:true}).waitFor();
    await a.reload();
+   await a.getByLabel('Sandbox service price').fill('100');
    await a.getByRole('button',{name:'Confirm request'}).click();
    await a.getByText('Confirmed',{exact:true}).waitFor();
    await b.reload();
    await b.getByText('Confirmed',{exact:true}).waitFor();
+   await b.getByText('$7.50',{exact:true}).waitFor();
+   await b.getByText('$107.50',{exact:true}).waitFor();
    await b.getByRole('button',{name:'Cancel booking'}).click();
    await b.getByRole('heading',{name:'Your bookings'}).waitFor({state:'hidden'});
    await navigate(b,'Shared community');

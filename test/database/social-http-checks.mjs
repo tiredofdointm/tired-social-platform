@@ -51,7 +51,7 @@ export async function socialHttpChecks(t,pool){
     return {url:'https://connect.stripe.com/setup/test'};
    }}
   };
-  const sandbox=createSocialHandler({config,pool,payments,connect});
+  const sandbox=createSocialHandler({config,pool,payments,connect,bookingFeeBps:750});
   const publicEvents=createSocialHandler({config,pool,payments:null,connect:null});
   const server=createServer({auth:createAuthHandler({config,pool,provider:{}}),
    social:(...args)=>(sandboxEnabled?sandbox:publicEvents)(...args)});
@@ -281,10 +281,26 @@ export async function socialHttpChecks(t,pool){
    assert.equal((await request(customers[1-bookingWinner],'services/bookings')).data.bookings.length,0);
    assert.equal((await request(customers[1-bookingWinner],booking+'/cancel','POST')).status,409);
    assert.equal((await request(customers[bookingWinner],booking+'/confirm','POST')).status,409);
-   assert.equal((await request(bob,booking+'/confirm','POST')).status,200);
+   const price={servicePriceCents:12506};
+   assert.equal((await request(bob,booking+'/confirm','POST',{servicePriceCents:1})).status,400);
+   sandboxEnabled=false;
+   assert.equal((await request(bob,booking+'/confirm','POST',price)).status,503);
+   sandboxEnabled=true;
+   assert.equal((await request(bob,booking+'/confirm','POST',price)).status,200);
+   assert.equal((await request(bob,booking+'/confirm','POST',price)).status,200);
+   assert.equal((await request(bob,booking+'/confirm','POST',{servicePriceCents:20000})).status,409);
+   assert.deepEqual((await request(customers[bookingWinner],'services/bookings')).data.bookings[0].quote,
+    {serviceCents:12506,feeCents:938,totalCents:13444});
+   sandboxEnabled=false;
+   assert.equal((await request(customers[bookingWinner],'services/bookings')).data.bookings[0].quote,null);
+   sandboxEnabled=true;
    assert.equal((await request(customers[bookingWinner],'services/bookings')).data.bookings[0].confirmed,true);
    assert.equal((await request(bob,'services/'+submitted.data.id,'DELETE')).status,409);
    assert.equal((await request(customers[bookingWinner],booking+'/cancel','POST')).status,200);
+   const recycled=await request(customers[1-bookingWinner],reserve,'POST');
+   assert.equal(recycled.status,200);
+   assert.equal((await request(bob,'services/bookings')).data.bookings[0].quote,null);
+   assert.equal((await request(customers[1-bookingWinner],'services/bookings/'+recycled.data.request_id+'/cancel','POST')).status,200);
    assert.equal((await request(bob,'services/slots/'+slot.data.id+'/remove','POST')).status,200);
    const rejected = await request(bob,'services','POST',{...service,title:'Another submission'});
    assert.equal((await request(alice,'services/'+rejected.data.id+'/review','PUT',{decision:'rejected'})).status,200);
