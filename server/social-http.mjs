@@ -1,3 +1,4 @@
+import {testConnect,providerConnect} from './provider-connect.mjs';
 import {testPayments,ticketWebhook} from './ticket-checkout.mjs';
 import {services} from './services.mjs';
 import {eventsPlans} from './events-plans.mjs';
@@ -21,7 +22,7 @@ async function readJson(req){
  });
  try{return JSON.parse(Buffer.concat(chunks).toString('utf8'));}catch{fail(400,'invalid_json');}
 }
-export function createSocialHandler({config,pool,payments=testPayments()}){
+export function createSocialHandler({config,pool,payments=testPayments(),connect=testConnect()}){
  const sessions=authRepository(pool),repo=socialRepository(pool);
  let windowStart=Date.now(),writes=0;
  return async(req,res,url)=>{
@@ -42,6 +43,10 @@ export function createSocialHandler({config,pool,payments=testPayments()}){
    }
    if(/^\/api\/v1\/(events|plans)(\/|$)/.test(path)){
     await eventsPlans({pool,payments,origin:config.origin,actor,path,method,req,send,fail,readJson,fields,text,uuid});
+    return true;
+   }
+   if(path==='/api/v1/services/connect'){
+    await providerConnect({pool,connect,actor,method,origin:config.origin,send,fail});
     return true;
    }
    if(/^\/api\/v1\/services(\/|$)/.test(path)){
