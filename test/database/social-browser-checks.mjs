@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
-import {mkdir} from 'node:fs/promises';
+import {mkdir,readFile} from 'node:fs/promises';
 import {createServer} from '../../server.mjs';
 import {authRepository,createAuthHandler,SESSION_COOKIE} from '../../server/auth.mjs';
 import {createSocialHandler} from '../../server/social-http.mjs';
@@ -114,6 +114,19 @@ export async function socialBrowserChecks(t,pool){
    assert.match(new URL(eventUrl).hash,/^#shared-events\/[0-9a-f-]{36}$/);
    await b.goto(eventUrl);
    await b.waitForFunction(()=>document.activeElement?.textContent?.startsWith('Browser concert'));
+   const calendarDownload=b.waitForEvent('download');
+   await b.getByRole('article').filter({hasText:'Browser concert'}).getByRole('button',{name:'Add to calendar',exact:true}).click();
+   const calendar=await calendarDownload;
+   assert.equal(calendar.suggestedFilename(),'tired-event.ics');
+   const calendarFile=await readFile(await calendar.path(),'utf8');
+   assert.ok(calendarFile.split('\r\n').every(line=>Buffer.byteLength(line)<=75));
+   const unfolded=calendarFile.replaceAll('\r\n ','');
+   assert.ok(unfolded.includes('SUMMARY:Browser concert '+'x'.repeat(95)+'\r\n'));
+   assert.ok(unfolded.includes('LOCATION:Concert Hall\r\n'));
+   assert.ok(unfolded.includes('URL:'+eventUrl+'\r\n'));
+   const expectedStart=new Date(local).toISOString().replace(/[-:]|\.\d{3}/g,'');
+   assert.ok(unfolded.includes('DTSTART:'+expectedStart+'\r\n'));
+
    await b.goto(config.origin+'/#shared-events/00000000-0000-0000-0000-000000000000');
    await b.getByText('This event is unavailable. Browse upcoming events below.',{exact:true}).waitFor();
    await navigate(b,'Shared events');
