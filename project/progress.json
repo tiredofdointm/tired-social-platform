@@ -5,7 +5,7 @@
   "currentSession": {
     "primaryTask": null,
     "nextTask": "T01",
-    "reason": "Implement ticket inventory and test-mode checkout with reservation and webhook reconciliation tests."
+    "reason": "Verify ticket checkout with a real Stripe sandbox purchase and refund after the reservation and webhook integration checks."
   },
   "workInProgressLimit": 1,
   "tasks": [
@@ -277,7 +277,7 @@
     {
       "id": "T01",
       "title": "Inventory, ticket checkout and webhook reconciliation",
-      "status": "ready",
+      "status": "in_progress",
       "priority": 1,
       "dependsOn": [
         "E02"

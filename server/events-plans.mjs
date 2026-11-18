@@ -1,10 +1,11 @@
+import {checkout} from './ticket-checkout.mjs';
 import {transaction} from './database.mjs';
 
 const visibleOwner = (owner) => `EXISTS (SELECT 1 FROM users u WHERE u.id=${owner} AND u.status='active')
  AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.blocker_id=$1 AND b.blocked_id=${owner})
  OR (b.blocker_id=${owner} AND b.blocked_id=$1))`;
 
-export async function eventsPlans({pool,actor,path,method,req,send,fail,readJson,fields,text,uuid}) {
+export async function eventsPlans({pool,payments,origin,actor,path,method,req,send,fail,readJson,fields,text,uuid}) {
  if (path==='/api/v1/events/publishing' && method==='GET') {
   const {rows:[policy]}=await pool.query(`SELECT manual_review,
    EXISTS(SELECT 1 FROM publishing_admins WHERE user_id=$1) AS admin
@@ -37,12 +38,15 @@ export async function eventsPlans({pool,actor,path,method,req,send,fail,readJson
   return send(200,result.rows[0]);
  }
  if (path === '/api/v1/events' && method === 'GET') {
-  const {rows}=await pool.query(`SELECT e.id,e.title,e.venue,e.starts_at,e.capacity,
+  const {rows}=await pool.query(`SELECT e.id,e.title,e.venue,e.starts_at,e.capacity,e.ticket_price_cents,
+   (SELECT count(*)::int FROM ticket_orders o WHERE o.event_id=e.id AND o.state IN ('open','issued')) + (SELECT count(*)::int FROM ticket_holds h WHERE h.event_id=e.id AND h.expires_at>now()) AS held,
+   (SELECT state FROM ticket_orders o WHERE o.event_id=e.id AND o.buyer_id=$1 ORDER BY (state IN ('open','issued')) DESC, (state='refunded') DESC LIMIT 1) AS ticket_state,
+   (SELECT expires_at FROM ticket_holds h WHERE h.event_id=e.id AND h.buyer_id=$1 AND h.expires_at>now()) AS my_hold_until,
    (SELECT count(*)::int FROM rsvps r WHERE r.event_id=e.id) AS attending,
    EXISTS(SELECT 1 FROM rsvps r WHERE r.event_id=e.id AND r.user_id=$1) AS going
    FROM events e WHERE e.starts_at>now() AND e.publication='published' AND ${visibleOwner('e.owner_id')}
    ORDER BY e.starts_at,e.id LIMIT 100`,[actor]);
-  return send(200,{events:rows});
+  return send(200,{events:rows,checkoutEnabled:Boolean(payments)});
  }
  if (path === '/api/v1/plans' && method === 'GET') {
   const {rows}=await pool.query(`SELECT p.id,p.title,
@@ -57,27 +61,62 @@ export async function eventsPlans({pool,actor,path,method,req,send,fail,readJson
  if (['/api/v1/events','/api/v1/plans'].includes(path) && method === 'POST') {
   const body=await readJson(req);
   const event=path.endsWith('/events');
-  fields(body,event?['title','venue','startsAt','capacity']:['title','details','startsAt']);
+  fields(body,event?['title','venue','startsAt','capacity','ticketPriceCents']:['title','details','startsAt']);
   const startsAt=typeof body.startsAt==='string' && /Z$/.test(body.startsAt)?Date.parse(body.startsAt):NaN;
   if (!Number.isFinite(startsAt) || startsAt<=Date.now()) fail(400,'invalid_start_time');
   const values=[actor,text(body.title,120),new Date(startsAt),text(event?body.venue:body.details,event?160:1000)];
   if (event) {
    if (!Number.isInteger(body.capacity)||body.capacity<1||body.capacity>10000) fail(400,'invalid_capacity');
-   values.push(body.capacity);
+   if (body.ticketPriceCents != null && (!Number.isInteger(body.ticketPriceCents) ||
+       body.ticketPriceCents<50 || body.ticketPriceCents>99999999)) fail(400,'invalid_ticket_price');
+   values.push(body.capacity,body.ticketPriceCents??null);
   }
   const {rows}=await pool.query(event
-   ?`INSERT INTO events(owner_id,title,starts_at,venue,capacity,publication)
-      SELECT $1,$2,$3,$4,$5,CASE WHEN manual_review THEN 'pending' ELSE 'published' END
+   ?`INSERT INTO events(owner_id,title,starts_at,venue,capacity,ticket_price_cents,publication)
+      SELECT $1,$2,$3,$4,$5,$6,CASE WHEN manual_review THEN 'pending' ELSE 'published' END
       FROM event_publishing_policy RETURNING id,publication`
    :'INSERT INTO friend_plans(owner_id,title,starts_at,details) VALUES($1,$2,$3,$4) RETURNING id',values);
   return send(201,rows[0]);
  }
- const match=/^\/api\/v1\/(events|plans)\/([^/]+)\/(rsvp|invite|membership)$/.exec(path);
+ const match=/^\/api\/v1\/(events|plans)\/([^/]+)\/(rsvp|ticket-hold|checkout|invite|membership)$/.exec(path);
  if (!match || !uuid(match[2])) fail(404,'not_found');
  const [,resource,id,action]=match;
+ if(resource==='events' && action==='checkout' && method==='POST'){
+  const result=await transaction(pool,async db=>{
+   const event=(await db.query(`SELECT e.id,e.title,e.ticket_price_cents,e.starts_at FROM events e WHERE e.id=$2 AND e.starts_at>now()
+    AND e.publication='published' AND e.ticket_price_cents IS NOT NULL AND ${visibleOwner('e.owner_id')} FOR UPDATE`,[actor,id])).rows[0];
+   if(!event)fail(404,'not_found');
+   return checkout({db,actor,event,origin,payments,fail});
+  });
+  return send(200,result);
+ }
+ if (resource==='events' && action==='ticket-hold' && ['PUT','DELETE'].includes(method)) {
+  const hold=await transaction(pool,async db=>{
+   if (method==='DELETE') {
+    await db.query('DELETE FROM ticket_holds WHERE event_id=$1 AND buyer_id=$2',[id,actor]);
+    return null;
+   }
+   const event=await db.query(`SELECT capacity FROM events e WHERE id=$2 AND starts_at>now()
+     AND publication='published' AND ticket_price_cents IS NOT NULL AND ${visibleOwner('e.owner_id')}
+     FOR UPDATE`,[actor,id]);
+   if (!event.rowCount) fail(404,'not_found');
+   const active=await db.query(`SELECT count(*)::int AS total,
+     max(expires_at) FILTER (WHERE buyer_id=$2) AS mine FROM ticket_holds
+     WHERE event_id=$1 AND expires_at>now()`,[id,actor]);
+   if (active.rows[0].mine) return active.rows[0].mine;
+   const orders=(await db.query("SELECT count(*)::int AS total,bool_or(buyer_id=$2) AS mine FROM ticket_orders WHERE event_id=$1 AND state IN ('open','issued')",[id,actor])).rows[0];
+   if(orders.mine)fail(409,'existing_ticket_order');
+   if (active.rows[0].total+orders.total>=event.rows[0].capacity) fail(409,'event_full');
+   const result=await db.query(`INSERT INTO ticket_holds(event_id,buyer_id,expires_at)
+     SELECT id,$2,least(starts_at,now()+interval '10 minutes') FROM events WHERE id=$1
+     ON CONFLICT(event_id,buyer_id) DO UPDATE SET expires_at=excluded.expires_at,attempt_id=excluded.attempt_id RETURNING expires_at`,[id,actor]);
+   return result.rows[0].expires_at;
+  });
+  return send(200,{expiresAt:hold});
+ }
  if (resource==='events' && action==='rsvp' && ['PUT','DELETE'].includes(method)) {
   await transaction(pool,async db=>{
-   const {rows}=await db.query(`SELECT capacity FROM events e WHERE id=$2 AND starts_at>now() AND publication='published'
+   const {rows}=await db.query(`SELECT capacity FROM events e WHERE id=$2 AND ticket_price_cents IS NULL AND starts_at>now() AND publication='published'
     AND ${visibleOwner('e.owner_id')} FOR UPDATE`,[actor,id]);
    if (!rows.length) fail(404,'not_found');
    if (method==='DELETE') {

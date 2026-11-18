@@ -1,3 +1,4 @@
+import {testPayments,ticketWebhook} from './ticket-checkout.mjs';
 import {services} from './services.mjs';
 import {eventsPlans} from './events-plans.mjs';
 import {randomUUID} from 'node:crypto';
@@ -20,15 +21,17 @@ async function readJson(req){
  });
  try{return JSON.parse(Buffer.concat(chunks).toString('utf8'));}catch{fail(400,'invalid_json');}
 }
-export function createSocialHandler({config,pool}){
+export function createSocialHandler({config,pool,payments=testPayments()}){
  const sessions=authRepository(pool),repo=socialRepository(pool);
  let windowStart=Date.now(),writes=0;
  return async(req,res,url)=>{
   const path=url.pathname;
-  if(!/^\/api\/v1\/(feed|posts|profiles|follows|blocks|events|plans|services)(\/|$)/.test(path) && path!=='/api/v1/me/profile' && path!=='/api/v1/me/follow-requests')return false;
+  const webhook=path==='/api/v1/ticket-webhook';
+  if(!webhook && !/^\/api\/v1\/(feed|posts|profiles|follows|blocks|events|plans|services)(\/|$)/.test(path) && path!=='/api/v1/me/profile' && path!=='/api/v1/me/follow-requests')return false;
   const requestId=randomUUID();res.setHeader('Cache-Control','no-store');res.setHeader('X-Request-ID',requestId);
   function send(status,data){res.writeHead(status,{'Content-Type':'application/json'});res.end(JSON.stringify(data));}
   try{
+   if(webhook){await ticketWebhook({req,pool,payments,fail});send(200,{received:true});return true;}
    const token=sessionTokenFrom(req),user=await sessions.session(token);
    if(!user)fail(401,'authentication_required');
    const actor=user.id,method=req.method;
@@ -38,7 +41,7 @@ export function createSocialHandler({config,pool}){
     if(Date.now()-windowStart>=60000){windowStart=Date.now();writes=0;}if(++writes>300)fail(429,'rate_limited');
    }
    if(/^\/api\/v1\/(events|plans)(\/|$)/.test(path)){
-    await eventsPlans({pool,actor,path,method,req,send,fail,readJson,fields,text,uuid});
+    await eventsPlans({pool,payments,origin:config.origin,actor,path,method,req,send,fail,readJson,fields,text,uuid});
     return true;
    }
    if(/^\/api\/v1\/services(\/|$)/.test(path)){
@@ -128,6 +131,15 @@ export function createSocialHandler({config,pool}){
     });send(200,{blocked:method==='PUT'});
    }else fail(404,'not_found');
   }catch(error){
+   if(path.endsWith('/checkout') && !(error instanceof ApiError)){
+    const stripe=typeof error.type==='string' && error.type.startsWith('Stripe');
+    const safe=value=>typeof value==='string' && /^[a-zA-Z0-9_.\[\]-]{1,100}$/.test(value)?value:undefined;
+    console.error(JSON.stringify({event:'ticket_checkout_failed',requestId,source:stripe?'stripe':'application',
+     type:safe(error.type),code:safe(error.code),parameter:safe(error.param),stripeRequestId:safe(error.requestId)}));
+    const message=stripe?'Stripe could not open checkout':'The server could not prepare the ticket';
+    send(503,{error:{code:'checkout_failed',message:message+' (reference '+requestId+')',requestId}});
+    return true;
+   }
    const status=error instanceof ApiError?error.status:error.code==='23505'?409:503;
    const code=error instanceof ApiError?error.message:status===409?'conflict':'service_unavailable';send(status,{error:{code,message:code.replaceAll('_',' '),requestId}});
   }
