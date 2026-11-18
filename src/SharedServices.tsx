@@ -284,6 +284,8 @@ function BookingCheckout({booking,csrf}:{booking:Booking;csrf:string}){
   {paymentState==='open'&&<p>Sandbox payment is open. Refresh bookings after paying.</p>}
   {paymentState==='expired'&&<p>Sandbox checkout expired. Cancel and request the slot again to get a new quote.</p>}
   {paymentState==='refunded'&&<p>Sandbox payment refunded.</p>}
+  {booking.provider && (paymentState==='paid'||paymentState==='refunded') &&
+   <BookingSettlement requestId={booking.request_id} csrf={csrf} refundable={paymentState==='paid'}/>}
   {!booking.provider && Date.parse(booking.starts_at)>Date.now() && (!paymentState||paymentState==='open') && <button disabled={busy} onClick={async()=>{
    setBusy(true);
    setMessage('Contacting Stripe…');
@@ -299,5 +301,44 @@ function BookingCheckout({booking,csrf}:{booking:Booking;csrf:string}){
    finally{setBusy(false);}
   }}>{paymentState==='open'?'Resume sandbox checkout':'Open sandbox checkout'}</button>}
   {message && <p role="status">{message}{url && <> <a href={url} target="_blank" rel="noopener noreferrer">Open Stripe in a new tab</a></>}</p>}
+ </>;
+}
+
+
+type BookingTransfer = {chargedCents:number;refundedCents:number;transferredCents:number;reversedCents:number};
+
+function BookingSettlement({requestId,csrf,refundable}:{requestId:string;csrf:string;refundable:boolean}){
+ const [transfer,setTransfer]=useState<BookingTransfer|null>(null);
+ const [message,setMessage]=useState('');
+ const [busy,setBusy]=useState(false);
+ async function run(action:'refund'|'transfer'){
+  if(action==='refund'&&!window.confirm('Refund this sandbox booking and reverse the matching provider transfer?'))return;
+  setBusy(true);
+  setMessage('');
+  try{
+   const response=await fetch('/api/v1/services/bookings/'+requestId+'/'+action,
+    {method:action==='refund'?'POST':'GET',headers:{'X-CSRF-Token':csrf}});
+   const result=await response.json();
+   if(!response.ok)throw Error(result.error?.message??'Could not update the booking.');
+   if(action==='transfer')setTransfer(result);
+   else{
+    setTransfer(null);
+    setMessage(result.status==='refunded'?'This booking was already refunded.':'Refund submitted. Refresh bookings for confirmation.');
+   }
+  }catch(error){setMessage((error as Error).message);}
+  finally{setBusy(false);}
+ }
+ return <>
+  <div className="actions">
+   {refundable && <button type="button" disabled={busy} onClick={()=>void run('refund')}>Refund sandbox booking</button>}
+   <button type="button" disabled={busy} onClick={()=>void run('transfer')}>Verify Stripe transfer</button>
+  </div>
+  {message&&<p role="status">{message}</p>}
+  {transfer&&<dl>
+   <dt>Customer payment</dt><dd>{usd.format(transfer.chargedCents/100)}</dd>
+   <dt>Customer refund</dt><dd>{usd.format(transfer.refundedCents/100)}</dd>
+   <dt>Provider transfer</dt><dd>{usd.format(transfer.transferredCents/100)}</dd>
+   <dt>Transfer reversed</dt><dd>{usd.format(transfer.reversedCents/100)}</dd>
+  </dl>}
  </>;
 }

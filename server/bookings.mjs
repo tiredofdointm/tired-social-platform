@@ -1,4 +1,4 @@
-import {bookingCheckout} from './booking-payments.mjs';
+import {bookingCheckout,bookingRefund,bookingTransfer} from './booking-payments.mjs';
 
 export function sandboxBookingFee(connect, env=process.env){
   const value=env.STRIPE_BOOKING_TEST_FEE_BPS;
@@ -24,11 +24,14 @@ export async function bookingRoutes({pool, actor, path, method, req, send, fail,
     send(200, {bookings:rows,quotesEnabled:bookingFeeBps!==null});
     return true;
   }
-  const checkout=/^\/api\/v1\/services\/bookings\/([^/]+)\/checkout$/.exec(path);
-  if(checkout && method==='POST'){
-    if(!uuid(checkout[1]))fail(404,'not_found');
+  const paymentRoute=/^\/api\/v1\/services\/bookings\/([^/]+)\/(checkout|refund|transfer)$/.exec(path);
+  if(paymentRoute){
+    const [,id,action]=paymentRoute;
+    if(!uuid(id))fail(404,'not_found');
+    if(method!==(action==='transfer'?'GET':'POST'))fail(405,'method_not_allowed');
     if(!connect || bookingFeeBps===null)fail(503,'sandbox_booking_checkout_unavailable');
-    await bookingCheckout({pool,connect,actor,id:checkout[1],origin,send,fail});
+    const handler={checkout:bookingCheckout,refund:bookingRefund,transfer:bookingTransfer}[action];
+    await handler({pool,connect,actor,id,origin,send,fail});
     return true;
   }
   const match = /^\/api\/v1\/services\/(listings|slots|bookings)\/([^/]+)\/(availability|request|remove|confirm|cancel)$/.exec(path);

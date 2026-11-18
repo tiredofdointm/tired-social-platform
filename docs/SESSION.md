@@ -446,3 +446,9 @@ Next: exercise quoted bookings between two signed-in sandbox participants, then 
 Migration 013 reserves a confirmed booking during checkout and stores the price, fee, and destination used in Stripe. Only the buyer can start Checkout. The provider must have active transfers and payouts. Stripe charges the saved quote and transfers the service-price portion to the connected account. The platform pays Stripe processing costs. Signed checkout, expiry, and refund events update the booking payment status. A full refund releases the cancellation lock.
 
 Next: verify an end-to-end sandbox booking payment with two accounts and inspect the matching connected-account transfer. Initiating refunds with transfer reversal and payout reconciliation are still pending.
+
+## Sandbox booking refunds and transfer verification
+
+The buyer and provider completed the staging booking on revision 00041-jaj. The sandbox payment was $107.50 and a read-only Stripe check verified a linked $100.00 transfer to the assigned connected account. PR #11 adds provider-only refund initiation with Stripe transfer reversal and a read-only comparison of charge, refund, transfer and reversal for that booking. The signed Stripe refund event releases the booking lock.
+
+Next: exercise the refund and check that Stripe returned $107.50 to the buyer and reversed $100.00 from the provider. Reconcile a separate sandbox bank payout after this check.

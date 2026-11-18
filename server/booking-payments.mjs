@@ -87,3 +87,44 @@ export async function reconcileBookingPayment({event,pool,fail}){
   await db.query("UPDATE booking_payments SET payment_id=$2,state='paid' WHERE request_id=$1 AND state='open'",[id,data.payment_intent]);
  });
 }
+
+export async function bookingRefund({pool,connect,actor,id,send,fail}){
+ const result=await transaction(pool,async db=>{
+  const payment=(await db.query(`SELECT b.payment_id,b.state FROM booking_payments b
+   JOIN service_slots s ON s.request_id=b.request_id WHERE b.request_id=$1 AND s.provider_id=$2
+   FOR UPDATE OF b`,[id,actor])).rows[0];
+  if(!payment)fail(404,'not_found');
+  if(payment.state==='refunded')return {status:'refunded'};
+  if(payment.state!=='paid'||!payment.payment_id)fail(409,'booking_refund_unavailable');
+
+  const refund=await connect.refunds.create({payment_intent:payment.payment_id,reverse_transfer:true},
+   {idempotencyKey:'booking-full-refund-'+id.toLowerCase()});
+  if(refund.status==='failed'||refund.status==='canceled')fail(409,'refund_failed_check_stripe');
+  return {status:refund.status};
+ });
+ return send(200,result);
+}
+
+export async function bookingTransfer({pool,connect,actor,id,send,fail}){
+ const payment=(await pool.query(`SELECT b.payment_id,b.state,b.service_cents,b.fee_cents,b.destination_account
+  FROM booking_payments b JOIN service_slots s ON s.request_id=b.request_id
+  WHERE b.request_id=$1 AND s.provider_id=$2`,[id,actor])).rows[0];
+ if(!payment)fail(404,'not_found');
+ if(!['paid','refunded'].includes(payment.state)||!payment.payment_id)fail(409,'booking_transfer_unavailable');
+
+ const intent=await connect.paymentIntents.retrieve(payment.payment_id,{expand:['latest_charge']});
+ const charge=intent.latest_charge;
+ const total=payment.service_cents+payment.fee_cents;
+ if(intent.livemode!==false||intent.status!=='succeeded'||intent.currency!=='usd'||
+    intent.amount_received!==total||intent.metadata?.tired_booking?.toLowerCase()!==id.toLowerCase()||
+    !charge||typeof charge!=='object'||charge.livemode!==false||charge.paid!==true||
+    charge.amount!==total||typeof charge.transfer!=='string')fail(409,'booking_transfer_unverified');
+
+ const transfer=await connect.transfers.retrieve(charge.transfer);
+ if(transfer.livemode!==false||transfer.currency!=='usd'||transfer.source_transaction!==charge.id||
+    transfer.destination!==payment.destination_account||transfer.amount!==payment.service_cents)
+  fail(409,'booking_transfer_mismatch');
+
+ return send(200,{currency:'usd',chargedCents:total,refundedCents:charge.amount_refunded,
+  transferredCents:transfer.amount,reversedCents:transfer.amount_reversed});
+}
