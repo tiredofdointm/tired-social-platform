@@ -140,6 +140,7 @@ export function SharedServices({preview, onPreviewMode}:{
   return <section className="shared-community provider-directory stack">
     <h1>Find talent</h1>
     <p role="status">{message}</p>
+    <ProviderConnect csrf={view.csrf}/>
     <details className="panel">
       <summary>List your service</summary>
       <form onSubmit={event => void submit(event)}>
@@ -219,4 +220,38 @@ export function SharedServices({preview, onPreviewMode}:{
       ? `${matches.length} service${matches.length === 1 ? '' : 's'} found.`
       : listings.length ? 'No services match your filters.' : 'No services have been published yet.'}</p>
   </section>;
+}
+
+
+type ConnectStatus = {enabled:boolean;eligible:boolean;connected:boolean;transfersEnabled?:boolean;payoutsEnabled?:boolean;url?:string};
+
+function ProviderConnect({csrf}:{csrf:string}){
+ const [status,setStatus]=useState<ConnectStatus|null>(null);
+ const [busy,setBusy]=useState(false);
+ const [message,setMessage]=useState('');
+ useEffect(()=>{
+  const controller=new AbortController();
+  void get<ConnectStatus>('services/connect',controller.signal).then(setStatus).catch(()=>{
+   if(!controller.signal.aborted)setMessage('Could not load Stripe sandbox status.');
+  });
+  return ()=>controller.abort();
+ },[]);
+ if(!status?.eligible)return message?<p role="status">{message}</p>:null;
+ return <section className="panel">
+  <h2>Stripe sandbox onboarding</h2>
+  {status.connected && <p>Transfers {status.transfersEnabled?'enabled':'pending'} · Payouts {status.payoutsEnabled?'enabled':'pending'}</p>}
+  <button disabled={busy} onClick={async()=>{
+   setBusy(true);
+   setMessage('');
+   try{
+    const response=await fetch('/api/v1/services/connect',{method:'POST',headers:{'X-CSRF-Token':csrf}});
+    if(!response.ok)throw Error('Could not open Stripe sandbox onboarding.');
+    const result:ConnectStatus=await response.json();
+    if(!result.url)throw Error('Publish a provider listing before onboarding.');
+    window.location.assign(result.url);
+   }catch(error){setMessage((error as Error).message);}
+   finally{setBusy(false);}
+  }}>{busy?'Opening Stripe…':status.connected?'Continue Stripe onboarding':'Start Stripe onboarding'}</button>
+  {message && <p role="status">{message}</p>}
+ </section>;
 }
