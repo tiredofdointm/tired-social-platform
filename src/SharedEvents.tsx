@@ -73,7 +73,7 @@ export function SharedEvents(){
  }
  if(state==='loading')return <p role="status">Loading events and plans…</p>;
  if(state==='preview')return <section className="panel"><h1>Shared events and plans</h1><p>Shared access is pending cloud setup.</p><a href="#discover">Explore the event preview</a></section>;
- if(state==='signed-out')return <section className="panel"><h1>Shared events and plans</h1><a href="/auth/google">Sign in with Google</a></section>;
+ if(state==='signed-out')return <section className="panel"><h1>Shared events and plans</h1><a href="/auth/google?next=shared-events">Sign in with Google</a></section>;
  if(state==='error')return <section className="panel"><p role="alert">{message}</p><button onClick={()=>void load()}>Retry</button></section>;
 
  return <section className="shared-community">
