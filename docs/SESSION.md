@@ -400,3 +400,6 @@ PR #4 merged at 84b6e686e2a90decc8c99966a7296234da9c2e9c. PostgreSQL concurrent 
 
 ## Booking rollout verified
 The production domain and tagged endpoint both returned status ok on tired-social-platform-bookings-84b6e68. Google sign-in mode is active. The booking API returned HTTP 401 without a session. Request, confirmation, cancellation and race behavior were tested in CI with two accounts. An authenticated production booking was not exercised during this check. Next: T01 ticket inventory and test-mode checkout.
+
+## Ticket inventory in development
+Migration 007 and Shared Events support optional USD test ticket prices and one ten-minute hold per account and event. The HTTP suite covers concurrent requests for the last ticket, retry, cancellation, expiry, and the free RSVP boundary. Next: complete sandbox checkout, signed webhook fulfillment and refund reconciliation before production rollout.

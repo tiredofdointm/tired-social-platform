@@ -277,7 +277,7 @@
     {
       "id": "T01",
       "title": "Inventory, ticket checkout and webhook reconciliation",
-      "status": "ready",
+      "status": "in_progress",
       "priority": 1,
       "dependsOn": [
         "E02"
