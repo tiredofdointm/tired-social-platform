@@ -39,6 +39,23 @@ export async function socialHttpChecks(t,pool){
   let bookingTransferReversed=0;
   let bookingTransferDestination='acct_providerFixture';
   const connect={
+   payouts:{list:async (params,scope)=>{
+    assert.deepEqual(params,{limit:5});
+    assert.deepEqual(scope,{stripeAccount:'acct_providerFixture'});
+    const base={livemode:false,type:'bank_account',currency:'usd',status:'paid',
+     automatic:true,reconciliation_status:'completed',amount:10000,arrival_date:1800000000};
+    return {data:[{...base,id:'po_match',balance_transaction:'txn_payout'},
+     {...base,id:'po_diff',amount:10500},{...base,id:'po_manual',automatic:false},
+     {...base,id:'po_pending',status:'pending'},{...base,id:'po_more'}]};
+   }},
+   balanceTransactions:{list:async ({payout,limit},scope)=>{
+    assert.equal(limit,100);
+    assert.deepEqual(scope,{stripeAccount:'acct_providerFixture'});
+    assert.ok(['po_match','po_diff','po_more'].includes(payout));
+    return {has_more:payout==='po_more',data:[{id:'txn_payout',source:'po_match',currency:'usd',net:-10000},
+     {id:'txn_first',currency:'usd',net:12000},{id:'txn_reversal',currency:'usd',net:-2000}]
+     .filter(entry=>payout==='po_match'||entry.id!=='txn_payout')};
+   }},
    refunds:{create:async (params,options)=>{
     bookingRefundArguments.push({params,options});
     return {status:'succeeded'};
@@ -273,6 +290,17 @@ export async function socialHttpChecks(t,pool){
    const links=await Promise.all([request(bob,'services/connect','POST'),request(bob,'services/connect','POST')]);
    assert.ok(links.every(result=>result.status===200 && result.data.url==='https://connect.stripe.com/setup/test'));
    assert.equal(connectAccounts,1);
+   assert.equal((await request(null,'services/connect/payouts')).status,401);
+   assert.equal((await request(alice,'services/connect/payouts')).status,404);
+   const report=(await request(bob,'services/connect/payouts')).data.payouts;
+   assert.deepEqual(report.map(item=>item.reconciliation),['matched','mismatch','unsupported','pending','more_entries']);
+   assert.equal(report[0].fundingCents,10000);
+   assert.equal(report[0].entries,2);
+   assert.equal(report[4].fundingCents,null);
+   sandboxEnabled=false;
+   assert.equal((await request(bob,'services/connect/payouts')).status,503);
+   sandboxEnabled=true;
+
    assert.deepEqual((await request(bob,'services/connect')).data,
     {enabled:true,eligible:true,connected:true,detailsSubmitted:true,transfersEnabled:true,payoutsEnabled:true});
    sandboxEnabled=false;
