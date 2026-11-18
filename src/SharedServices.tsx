@@ -270,6 +270,7 @@ function ProviderConnect({csrf}:{csrf:string}){
    finally{setBusy(false);}
   }}>{busy?'Opening Stripe…':status.connected?'Continue Stripe onboarding':'Start Stripe onboarding'}</button>
   {message && <p role="status">{message}</p>}
+  {status.connected && <SandboxPayouts/>}
  </section>;
 }
 
@@ -341,4 +342,44 @@ function BookingSettlement({requestId,csrf,refundable}:{requestId:string;csrf:st
    <dt>Transfer reversed</dt><dd>{usd.format(transfer.reversedCents/100)}</dd>
   </dl>}
  </>;
+}
+
+
+type SandboxPayout = {
+ id:string;amountCents:number;currency:string;status:string;arrivalDate:number;
+ fundingCents:number|null;entries:number|null;reconciliation:string;
+};
+
+function SandboxPayouts(){
+ const [payouts,setPayouts]=useState<SandboxPayout[]|null>(null);
+ const [message,setMessage]=useState('');
+ const [busy,setBusy]=useState(false);
+ const labels:Record<string,string>={
+  matched:'Matched Stripe funding',mismatch:'Funding amount differs',pending:'Waiting for Stripe reconciliation',
+  unsupported:'Funding breakdown unavailable for this payout type',more_entries:'Funding breakdown exceeds 100 entries',
+  not_paid:'Payout did not complete',unavailable:'Stripe returned no funding entries',currency_mismatch:'Funding entries use a different currency'
+ };
+ async function load(){
+  setBusy(true);
+  setMessage('');
+  try{
+   const {payouts}=await get<{payouts:SandboxPayout[]}>('services/connect/payouts',new AbortController().signal);
+   setPayouts(payouts);
+  }catch{setMessage('Could not load sandbox payouts.');}
+  finally{setBusy(false);}
+ }
+ return <details>
+  <summary>Sandbox payouts</summary>
+  <button type="button" disabled={busy} onClick={()=>void load()}>{payouts?'Refresh payouts':'Load payouts'}</button>
+  {message && <p role="status">{message}</p>}
+  {payouts?.length===0 && <p>No payouts recorded in this sandbox account.</p>}
+  {!!payouts?.length && <ul>{payouts.map(payout=>{
+   const currency=new Intl.NumberFormat('en-US',{style:'currency',currency:payout.currency});
+   return <li key={payout.id}>
+    <p>{currency.format(payout.amountCents/100)} · {payout.status} · {new Date(payout.arrivalDate*1000).toLocaleDateString()}</p>
+    <p>{labels[payout.reconciliation]}</p>
+    {payout.fundingCents!==null && <p>{currency.format(payout.fundingCents/100)} from {payout.entries} Stripe entries</p>}
+   </li>;
+  })}</ul>}
+ </details>;
 }
