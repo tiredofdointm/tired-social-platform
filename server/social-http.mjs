@@ -131,6 +131,15 @@ export function createSocialHandler({config,pool,payments=testPayments()}){
     });send(200,{blocked:method==='PUT'});
    }else fail(404,'not_found');
   }catch(error){
+   if(path.endsWith('/checkout') && !(error instanceof ApiError)){
+    const stripe=typeof error.type==='string' && error.type.startsWith('Stripe');
+    const safe=value=>typeof value==='string' && /^[a-zA-Z0-9_.\[\]-]{1,100}$/.test(value)?value:undefined;
+    console.error(JSON.stringify({event:'ticket_checkout_failed',requestId,source:stripe?'stripe':'application',
+     type:safe(error.type),code:safe(error.code),parameter:safe(error.param),stripeRequestId:safe(error.requestId)}));
+    const message=stripe?'Stripe could not open checkout':'The server could not prepare the ticket';
+    send(503,{error:{code:'checkout_failed',message:message+' (reference '+requestId+')',requestId}});
+    return true;
+   }
    const status=error instanceof ApiError?error.status:error.code==='23505'?409:503;
    const code=error instanceof ApiError?error.message:status===409?'conflict':'service_unavailable';send(status,{error:{code,message:code.replaceAll('_',' '),requestId}});
   }
