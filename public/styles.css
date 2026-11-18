@@ -34,3 +34,24 @@ body[data-density=compact] .panel,body[data-density=compact] .card-body{padding:
 .provider-directory details > article:first-of-type {
   margin-top: 1rem;
 }
+
+
+.nav-toggle { display: none; }
+.shared-community :is(article, .shared-person) { overflow-wrap: anywhere; }
+.shared-community :is(input, select, textarea) { min-width: 0; max-width: 100%; }
+
+@media (max-width: 760px) {
+  .sidebar-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .nav-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    min-width: 0;
+    text-align: left;
+  }
+  .nav-current { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+  .sidebar .nav { display: none; }
+  .sidebar .nav-open { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: visible; gap: 6px; }
+  .sidebar .nav button { white-space: normal; min-height: 44px; }
+}

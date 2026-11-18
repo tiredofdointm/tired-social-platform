@@ -109,16 +109,16 @@ export function SharedEvents(){
   </section>}
   <h2>Upcoming events</h2>
   <div className="stack">{events.map(event=><article className="panel" key={event.id}>
-   <h3>{event.title}</h3><p>{event.venue} · {new Date(event.starts_at).toLocaleString()}</p>
+   <h3 id={`event-title-${event.id}`}>{event.title}</h3><p>{event.venue} · {new Date(event.starts_at).toLocaleString()}</p>
    <p>{event.attending} / {event.capacity} attending</p>
-   <button disabled={busy||(!event.going&&event.attending>=event.capacity)} onClick={()=>void action(
+   <button aria-describedby={`event-title-${event.id}`} disabled={busy||(!event.going&&event.attending>=event.capacity)} onClick={()=>void action(
     ()=>api('events/'+event.id+'/rsvp',event.going?'DELETE':'PUT'),event.going?'RSVP canceled.':'RSVP saved.'
    )}>{event.going?'Cancel RSVP':event.attending>=event.capacity?'Event full':'RSVP'}</button>
   </article>)}</div>
   {!events.length&&<p>No upcoming events.</p>}
   <h2>Private friend plans</h2>
   <div className="stack">{plans.map(plan=><article className="panel" key={plan.id}>
-   <h3>{plan.title}</h3>
+   <h3 id={`plan-title-${plan.id}`}>{plan.title}</h3>
    {plan.details&&<p className="post-text">{plan.details}</p>}
    {plan.starts_at&&<p>{new Date(plan.starts_at).toLocaleString()}</p>}
    {plan.owner?<form onSubmit={event=>{
@@ -128,8 +128,8 @@ export function SharedEvents(){
     void action(async()=>{await api('plans/'+plan.id+'/invite','PUT',{handle});form.reset();},'In-app invitation saved.');
    }}><label>Invite by handle<input name="handle" required pattern="[a-z0-9_]{3,30}"/></label><button disabled={busy}>Invite</button></form>
    :<div className="actions">
-     {!plan.accepted&&<button disabled={busy} onClick={()=>void action(()=>api('plans/'+plan.id+'/membership','PUT'),'Invitation accepted.')}>Accept invitation</button>}
-     <button disabled={busy} onClick={()=>void action(()=>api('plans/'+plan.id+'/membership','DELETE'),'Membership removed.')}>{plan.accepted?'Leave plan':'Decline invitation'}</button>
+     {!plan.accepted&&<button aria-describedby={`plan-title-${plan.id}`} disabled={busy} onClick={()=>void action(()=>api('plans/'+plan.id+'/membership','PUT'),'Invitation accepted.')}>Accept invitation</button>}
+     <button aria-describedby={`plan-title-${plan.id}`} disabled={busy} onClick={()=>void action(()=>api('plans/'+plan.id+'/membership','DELETE'),'Membership removed.')}>{plan.accepted?'Leave plan':'Decline invitation'}</button>
     </div>}
   </article>)}</div>
   {!plans.length&&<p>No plans or invitations.</p>}
