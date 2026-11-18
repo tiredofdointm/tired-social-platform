@@ -440,3 +440,9 @@ The sandbox design assumes one US provider and a USD payment per accepted bookin
 Migration 012 adds an optional server-calculated USD quote at provider confirmation. Buyers and providers see the service price, customer-paid platform fee and total. Existing confirmations retain their amounts on retry. Cancellation clears the quote before reusing the slot. Quotes require the existing Connect sandbox flag and STRIPE_BOOKING_TEST_FEE_BPS, an integer from 0 to 10000. No live fee has been selected.
 
 Next: exercise quoted bookings between two signed-in sandbox participants, then add checkout for the exact saved quote and reconcile connected-account proceeds, refunds and payouts.
+
+## Sandbox booking payments
+
+Migration 013 reserves a confirmed booking during checkout and stores the price, fee, and destination used in Stripe. Only the buyer can start Checkout. The provider must have active transfers and payouts. Stripe charges the saved quote and transfers the service-price portion to the connected account. The platform pays Stripe processing costs. Signed checkout, expiry, and refund events update the booking payment status. A full refund releases the cancellation lock.
+
+Next: verify an end-to-end sandbox booking payment with two accounts and inspect the matching connected-account transfer. Initiating refunds with transfer reversal and payout reconciliation are still pending.
