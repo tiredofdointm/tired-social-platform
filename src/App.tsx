@@ -16,7 +16,21 @@ export function App(){
  const {state,setState,storageOK}=useWorkspace(),[page,setPage]=useState<Page>(hashPage),[query,setQuery]=useState(''),[modal,setModal]=useState<ModalState|null>(null),[toast,setToast]=useState(''),[talentPreview,setTalentPreview]=useState(false);
  const [menuOpen,setMenuOpen]=useState(false),menuButton=useRef<HTMLButtonElement>(null),modalOpener=useRef<HTMLElement>(null);
  useEffect(()=>{const change=()=>{setPage(hashPage());setQuery('');setMenuOpen(false);};window.addEventListener('hashchange',change);return()=>window.removeEventListener('hashchange',change);},[]);
- useEffect(()=>{Object.assign(document.body.dataset,{theme:state.prefs.theme,accent:state.prefs.accent,density:state.prefs.density,motion:state.prefs.motion?'on':'off'});},[state.prefs]);
+ useEffect(()=>{
+  const {theme,accent,density,motion}=state.prefs;
+  const dark=matchMedia('(prefers-color-scheme: dark)');
+  function applyAppearance(){
+   Object.assign(document.body.dataset,{
+    theme:theme==='system'?(dark.matches?'dark':'light'):theme,
+    accent,density,motion:motion?'on':'off'
+   });
+  }
+  applyAppearance();
+  if(theme==='system'){
+   dark.addEventListener('change',applyAppearance);
+   return ()=>dark.removeEventListener('change',applyAppearance);
+  }
+ },[state.prefs]);
  useEffect(()=>{if(!toast)return;const timer=setTimeout(()=>setToast(''),4000);return()=>clearTimeout(timer);},[toast]);
  function go(p:Page){
   const previousFocus=document.activeElement;

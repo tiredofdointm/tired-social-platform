@@ -15,7 +15,7 @@ export function restoreState(raw:string|null):State{
  const example:State={...seed,plans:[{id:'',title:'',date:'',time:'',friends:'',notes:''}],bookings:[{id:'',name:'',date:'',hours:1,subtotal:0,fee:0,total:0}]};
  if(!validShape(v,example))return seed;
  const prefs=v.prefs as Record<string,unknown>;
- if(!['dark','light'].includes(String(prefs.theme))||!['lime','violet','peach'].includes(String(prefs.accent))||!['comfortable','compact'].includes(String(prefs.density)))return seed;
+ if(!['dark','light','system'].includes(String(prefs.theme))||!['lime','violet','peach'].includes(String(prefs.accent))||!['comfortable','compact'].includes(String(prefs.density)))return seed;
  return v as unknown as State;
  }catch{return makeSeed();}
 }

@@ -478,3 +478,9 @@ The automatic Cloud Build deployment of PR #16 succeeded on `tired-social-stagin
 Find talent now lets providers select one of their recent paid bookings under Sandbox payouts, including bookings that have ended. The check traces the saved Stripe payment through the provider transfer and verifies its contribution to a reconciled paid payout. The browser and Cloud Shell diagnostic use the same matching rules.
 
 Next: deploy the merged changes to the europe-west1 payment sandbox with the existing release batch, then verify the real booking in Find talent. Cloud Shell and the Cloud Run console returned Site Unavailable from the connected browser. The booking payout remains in verification.
+
+## System appearance preference
+
+The ticket-test sandbox serves 00046-zab. The deployed booking payout check reports $100 pending and no recorded payout. Production smoke checks passed on 00044-pov. The scheduled payout watch handles the remaining Stripe verification while independent UI work continues.
+
+Customize now offers a System theme that follows the device color scheme and responds to changes while the page is open. Existing Dark and Light settings are preserved. Next: verify the browser appearance and persistence checks in CI and confirm the automatic staging deployment.
