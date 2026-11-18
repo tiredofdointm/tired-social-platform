@@ -452,3 +452,9 @@ Next: verify an end-to-end sandbox booking payment with two accounts and inspect
 The buyer and provider completed the staging booking on revision 00041-jaj. The sandbox payment was $107.50 and a read-only Stripe check verified a linked $100.00 transfer to the assigned connected account. PR #11 adds provider-only refund initiation with Stripe transfer reversal and a read-only comparison of charge, refund, transfer and reversal for that booking. The signed Stripe refund event releases the booking lock.
 
 Next: exercise the refund and check that Stripe returned $107.50 to the buyer and reversed $100.00 from the provider. Reconcile a separate sandbox bank payout after this check.
+
+## Sandbox payout reconciliation
+
+The provider completed the full $107.50 sandbox refund on 00042-cot and Stripe returned a $100.00 transfer reversal. The payout panel now reports the five latest payouts for the signed-in provider's sandbox connected account. It compares the USD amount of an automatic bank payout with the net Stripe entries once Stripe completes reconciliation. It identifies manual, pending, mismatched, and incomplete results.
+
+Next: stage the panel and verify an actual paid automatic sandbox payout. The earlier booking was fully reversed, so a separate sandbox booking or existing eligible balance is needed for the payout check. Do not mark this as bank receipt verification.

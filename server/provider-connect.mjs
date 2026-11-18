@@ -40,3 +40,30 @@ export async function providerConnect({pool,connect,actor,method,origin,send,fai
  if(new URL(link.url).origin!=='https://connect.stripe.com')fail(503,'onboarding_unavailable');
  return send(200,{...status,url:link.url});
 }
+
+export async function providerPayouts({pool,connect,actor,method,send,fail}){
+ if(method!=='GET')fail(405,'method_not_allowed');
+ if(!connect)fail(503,'sandbox_payouts_unavailable');
+ const {rows:[provider]}=await pool.query('SELECT stripe_account_id FROM provider_connect_accounts WHERE provider_id=$1',[actor]);
+ if(!provider)fail(404,'not_found');
+
+ const scope={stripeAccount:provider.stripe_account_id};
+ const page=await connect.payouts.list({limit:5},scope);
+ if(page.data.some(payout=>payout.livemode!==false))fail(503,'sandbox_payouts_unavailable');
+
+ const payouts=await Promise.all(page.data.map(async payout=>{
+  const summary={id:payout.id,amountCents:payout.amount,currency:payout.currency,status:payout.status,
+   arrivalDate:payout.arrival_date,fundingCents:null,entries:null};
+  if(!payout.automatic||payout.type!=='bank_account'||payout.currency!=='usd')return {...summary,reconciliation:'unsupported'};
+  if(['failed','canceled'].includes(payout.status))return {...summary,reconciliation:'not_paid'};
+  if(payout.status!=='paid'||payout.reconciliation_status!=='completed')return {...summary,reconciliation:'pending'};
+  const {data,has_more}=await connect.balanceTransactions.list({payout:payout.id,limit:100},scope);
+  if(has_more)return {...summary,reconciliation:'more_entries'};
+  const funding=data.filter(entry=>entry.id!==payout.balance_transaction && entry.source!==payout.id);
+  if(!funding.length)return {...summary,reconciliation:'unavailable'};
+  if(funding.some(entry=>entry.currency!==payout.currency))return {...summary,reconciliation:'currency_mismatch'};
+  const fundingCents=funding.reduce((total,entry)=>total+entry.net,0);
+  return {...summary,fundingCents,entries:funding.length,reconciliation:fundingCents===payout.amount?'matched':'mismatch'};
+ }));
+ return send(200,{payouts});
+}
