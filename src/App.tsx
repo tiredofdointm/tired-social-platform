@@ -9,15 +9,16 @@ import {Discover,Feed,Plans,TalentPage,Studio,Settings} from './pages';
 import {Modal} from './dialogs';
 import {initials} from './components';
 import {makeSeed} from './model';
-import type {Page,ModalState,Update} from './types';
+import type {Page,ModalState,Update,Preferences} from './types';
 const navs:[Page,string,string][]=[['discover','◈','Discover'],['feed','≋','Your feed'],['community','◎','Shared community'],['plans','◷','Friend plans'],['shared-events','◇','Shared events'],['talent','✧','Find talent'],['studio','▦','Organizer studio'],['settings','⚙','Customize']];
 function hashPage():Page{return navs.find(n=>n[0]===location.hash.slice(1))?.[0]||'discover';}
 export function App(){
  const {state,setState,storageOK}=useWorkspace(),[page,setPage]=useState<Page>(hashPage),[query,setQuery]=useState(''),[modal,setModal]=useState<ModalState|null>(null),[toast,setToast]=useState(''),[talentPreview,setTalentPreview]=useState(false);
+ const [appearancePreview,setAppearancePreview]=useState<Omit<Preferences,'review'>|null>(null);
  const [menuOpen,setMenuOpen]=useState(false),menuButton=useRef<HTMLButtonElement>(null),modalOpener=useRef<HTMLElement>(null);
  useEffect(()=>{const change=()=>{setPage(hashPage());setQuery('');setMenuOpen(false);};window.addEventListener('hashchange',change);return()=>window.removeEventListener('hashchange',change);},[]);
  useEffect(()=>{
-  const {theme,accent,density,motion}=state.prefs;
+  const {theme,accent,density,motion}=page==='settings'&&appearancePreview?appearancePreview:state.prefs;
   const dark=matchMedia('(prefers-color-scheme: dark)');
   function applyAppearance(){
    Object.assign(document.body.dataset,{
@@ -30,7 +31,7 @@ export function App(){
    dark.addEventListener('change',applyAppearance);
    return ()=>dark.removeEventListener('change',applyAppearance);
   }
- },[state.prefs]);
+ },[state.prefs,page,appearancePreview]);
  useEffect(()=>{if(!toast)return;const timer=setTimeout(()=>setToast(''),4000);return()=>clearTimeout(timer);},[toast]);
  function go(p:Page){
   const previousFocus=document.activeElement;
@@ -55,7 +56,7 @@ export function App(){
  const update:Update=(change,message)=>{setState(previous=>{const next=structuredClone(previous);change(next);return next;});if(message)setToast(message);};
  const shared=page==='community'||page==='shared-events'||(page==='talent'&&!talentPreview);
  const searchable=!shared&&page!=='studio'&&page!=='settings';
- const content={'shared-events':<SharedEvents/>,community:<SharedSocial/>,discover:<Discover/>,feed:<Feed/>,plans:<Plans/>,talent:<SharedServices preview={<TalentPage/>} onPreviewMode={setTalentPreview}/>,studio:<Studio/>,settings:<Settings/>}[page];
+ const content={'shared-events':<SharedEvents/>,community:<SharedSocial/>,discover:<Discover/>,feed:<Feed/>,plans:<Plans/>,talent:<SharedServices preview={<TalentPage/>} onPreviewMode={setTalentPreview}/>,studio:<Studio/>,settings:<Settings onAppearancePreview={setAppearancePreview}/>}[page];
  return <WorkspaceContext.Provider value={{state,update,go,query,open:openModal,notify:setToast}}><div className="layout"><aside className="sidebar" onKeyDown={event=>{
   if(event.key==='Escape'&&menuOpen){event.preventDefault();setMenuOpen(false);menuButton.current?.focus();}
  }}><div className="sidebar-heading"><a className="logo" href="#discover">tired<span>®</span></a>

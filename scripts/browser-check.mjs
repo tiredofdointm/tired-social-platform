@@ -37,6 +37,12 @@ try {
  await page.waitForFunction(()=>document.activeElement?.textContent==='Explore ↗');
  await page.getByRole('button',{name:'Customize',exact:true}).click();
  assert.equal(await page.getByRole('searchbox').count(),0);
+ await page.getByLabel('Accent',{exact:true}).selectOption('peach');
+ await page.waitForFunction(()=>document.body.dataset.accent==='peach');
+ await page.getByRole('button',{name:'Discover',exact:true}).click();
+ await page.waitForFunction(()=>document.body.dataset.accent==='lime');
+ await page.getByRole('button',{name:'Customize',exact:true}).click();
+ assert.equal(await page.getByLabel('Accent',{exact:true}).inputValue(),'lime');
  await page.getByLabel('Theme',{exact:true}).selectOption('light');
  await page.getByRole('button',{name:'Save changes',exact:true}).click();
  assert.equal(await page.locator('body').getAttribute('data-theme'),'light');
