@@ -384,14 +384,15 @@ function BookingPayoutCheck({bookings}:{bookings:FundedBooking[]}){
  }
 
  return <form onSubmit={event=>void check(event)}>
-  <label>Paid booking<select value={selected} disabled={busy} onChange={event=>{
+  <label htmlFor="sandbox-paid-booking">Paid booking</label>
+  <select id="sandbox-paid-booking" value={selected} disabled={busy} onChange={event=>{
    setSelected(event.target.value);
    setMessage('');
   }}>
    {bookings.map(booking=><option key={booking.id} value={booking.id}>
     {booking.title} · {new Date(booking.startsAt).toLocaleString()} · {usd.format(booking.serviceCents/100)}
    </option>)}
-  </select></label>
+  </select>
   <button disabled={busy}>{busy?'Checking payout…':'Check booking payout'}</button>
   {message && <p role="status">{message}</p>}
  </form>;
