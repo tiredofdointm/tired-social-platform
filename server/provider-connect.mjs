@@ -1,4 +1,5 @@
 import Stripe from 'stripe';
+import {reconcilePayout, usdBalance} from './payout-report.mjs';
 import {transaction} from './database.mjs';
 
 export function testConnect(env=process.env){
@@ -48,22 +49,9 @@ export async function providerPayouts({pool,connect,actor,method,send,fail}){
  if(!provider)fail(404,'not_found');
 
  const scope={stripeAccount:provider.stripe_account_id};
- const page=await connect.payouts.list({limit:5},scope);
- if(page.data.some(payout=>payout.livemode!==false))fail(503,'sandbox_payouts_unavailable');
-
- const payouts=await Promise.all(page.data.map(async payout=>{
-  const summary={id:payout.id,amountCents:payout.amount,currency:payout.currency,status:payout.status,
-   arrivalDate:payout.arrival_date,fundingCents:null,entries:null};
-  if(!payout.automatic||payout.type!=='bank_account'||payout.currency!=='usd')return {...summary,reconciliation:'unsupported'};
-  if(['failed','canceled'].includes(payout.status))return {...summary,reconciliation:'not_paid'};
-  if(payout.status!=='paid'||payout.reconciliation_status!=='completed')return {...summary,reconciliation:'pending'};
-  const {data,has_more}=await connect.balanceTransactions.list({payout:payout.id,limit:100},scope);
-  if(has_more)return {...summary,reconciliation:'more_entries'};
-  const funding=data.filter(entry=>entry.id!==payout.balance_transaction && entry.source!==payout.id);
-  if(!funding.length)return {...summary,reconciliation:'unavailable'};
-  if(funding.some(entry=>entry.currency!==payout.currency))return {...summary,reconciliation:'currency_mismatch'};
-  const fundingCents=funding.reduce((total,entry)=>total+entry.net,0);
-  return {...summary,fundingCents,entries:funding.length,reconciliation:fundingCents===payout.amount?'matched':'mismatch'};
- }));
- return send(200,{payouts});
+ const [page,balance]=await Promise.all([connect.payouts.list({limit:5},scope),connect.balance.retrieve({},scope)]);
+ if(balance.livemode!==false || page.data.some(payout=>payout.livemode!==false))fail(503,'sandbox_payouts_unavailable');
+ const listEntries=params=>connect.balanceTransactions.list(params,scope);
+ const payouts=await Promise.all(page.data.map(payout=>reconcilePayout(payout,listEntries)));
+ return send(200,{payouts,balance:usdBalance(balance)});
 }

@@ -351,27 +351,32 @@ type SandboxPayout = {
 };
 
 function SandboxPayouts(){
- const [payouts,setPayouts]=useState<SandboxPayout[]|null>(null);
+ type Report={payouts:SandboxPayout[];balance:{availableCents:number;pendingCents:number}};
+ const [report,setReport]=useState<Report|null>(null);
+ const payouts=report?.payouts;
  const [message,setMessage]=useState('');
  const [busy,setBusy]=useState(false);
  const labels:Record<string,string>={
   matched:'Matched Stripe funding',mismatch:'Funding amount differs',pending:'Waiting for Stripe reconciliation',
-  unsupported:'Funding breakdown unavailable for this payout type',more_entries:'Funding breakdown exceeds 100 entries',
+  unsupported:'Funding breakdown unavailable for this payout type',more_entries:'Funding breakdown exceeds 1,000 entries',incomplete:'Stripe returned an incomplete funding breakdown',
   not_paid:'Payout did not complete',unavailable:'Stripe returned no funding entries',currency_mismatch:'Funding entries use a different currency'
  };
  async function load(){
   setBusy(true);
   setMessage('');
   try{
-   const {payouts}=await get<{payouts:SandboxPayout[]}>('services/connect/payouts',new AbortController().signal);
-   setPayouts(payouts);
-  }catch{setMessage('Could not load sandbox payouts.');}
+   setReport(await get<Report>('services/connect/payouts',new AbortController().signal));
+  }catch{setReport(null);setMessage('Could not load sandbox payouts. Try again.');}
   finally{setBusy(false);}
  }
  return <details>
   <summary>Sandbox payouts</summary>
-  <button type="button" disabled={busy} onClick={()=>void load()}>{payouts?'Refresh payouts':'Load payouts'}</button>
+  <button type="button" disabled={busy} onClick={()=>void load()}>{busy?'Loading payouts…':payouts?'Refresh payouts':'Load payouts'}</button>
   {message && <p role="status">{message}</p>}
+  {report?.balance && <dl>
+   <dt>Pending USD balance</dt><dd>{usd.format(report.balance.pendingCents/100)}</dd>
+   <dt>Available for payout</dt><dd>{usd.format(report.balance.availableCents/100)}</dd>
+  </dl>}
   {payouts?.length===0 && <p>No payouts recorded in this sandbox account.</p>}
   {!!payouts?.length && <ul>{payouts.map(payout=>{
    const currency=new Intl.NumberFormat('en-US',{style:'currency',currency:payout.currency});

@@ -3,9 +3,9 @@
   "updated": "2026-11-18",
   "objective": "Independent Google Cloud social/events/talent platform; no Laravel; customizable UI and verified production journeys.",
   "currentSession": {
-    "primaryTask": null,
+    "primaryTask": "M02",
     "nextTask": "M02",
-    "reason": "Design and verify Stripe Connect provider onboarding, fee disclosure, and payout reconciliation in the sandbox."
+    "reason": "Verify the funded sandbox booking against its connected account’s paid automatic payout. The last observed $100 was pending."
   },
   "workInProgressLimit": 1,
   "tasks": [
@@ -328,13 +328,15 @@
     {
       "id": "M02",
       "title": "Connect onboarding, platform fees and payouts",
-      "status": "ready",
+      "status": "verification",
       "priority": 1,
       "dependsOn": [
         "M01"
       ],
       "acceptance": "Provider test onboarding and financial reconciliation pass; configured fee policy is shown before purchase.",
-      "evidence": [],
+      "evidence": [
+        "https://github.com/tiredofdointm/tired-social-platform/pull/12"
+      ],
       "workstream": "M"
     },
     {

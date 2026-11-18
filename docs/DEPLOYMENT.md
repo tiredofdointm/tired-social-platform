@@ -30,3 +30,9 @@ Use `/api/health` for Cloud Run HTTP checks. The public smoke workflow checks th
 The database CI job uses PostgreSQL 16 to dump the populated integration database and restore it into a separate disposable database. It compares fingerprints of every public table, reruns the data and visibility checks, and validates the migration ledger against the restored copy. CI disposes of the temporary dump when the job exits.
 
 For a Cloud SQL recovery drill, record the backup or point-in-time recovery target and restore into an isolated instance. Keep public Cloud Run traffic and the production connection string in place during verification. On the isolated copy, confirm the migration ledger, application reads and writes, and recovery time. Record the backup timestamp and whether the restored data meets the recovery target before considering any cutover. The CI logical restore and the managed Cloud SQL recovery drill have separate acceptance criteria.
+
+## Sandbox release batch
+
+From a clean checkout pinned to the reviewed commit, run `bash scripts/verify-sandbox-release.sh` in the authenticated project shell with Node 22 or later. It stages that commit, applies migrations and verifies the tagged revision, Google redirect, retry page and sandbox webhook. It then inspects the provider's test balance and the latest five payouts. This command assigns zero production traffic.
+
+The diagnostic selects the single unrefunded $107.50 test booking with a $100 provider transfer from the past seven days. To select an older or ambiguous transfer, supply its Stripe transfer ID as the script's argument. To refresh only the payout report, run `bash scripts/inspect-sandbox-payout-readiness.sh`. A booking match requires its destination payment in a paid automatic payout and agreement between that payout's amount and its funding entries. A pending balance alone leaves the booking unverified.

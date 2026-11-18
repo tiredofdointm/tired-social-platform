@@ -39,6 +39,10 @@ export async function socialHttpChecks(t,pool){
   let bookingTransferReversed=0;
   let bookingTransferDestination='acct_providerFixture';
   const connect={
+   balance:{retrieve:async (params,scope)=>{
+    assert.deepEqual(scope,{stripeAccount:'acct_providerFixture'});
+    return {livemode:false,pending:[{currency:'usd',amount:10000},{currency:'eur',amount:900}],available:[]};
+   }},
    payouts:{list:async (params,scope)=>{
     assert.deepEqual(params,{limit:5});
     assert.deepEqual(scope,{stripeAccount:'acct_providerFixture'});
@@ -48,10 +52,15 @@ export async function socialHttpChecks(t,pool){
      {...base,id:'po_diff',amount:10500},{...base,id:'po_manual',automatic:false},
      {...base,id:'po_pending',status:'pending'},{...base,id:'po_more'}]};
    }},
-   balanceTransactions:{list:async ({payout,limit},scope)=>{
+   balanceTransactions:{list:async ({payout,limit,starting_after},scope)=>{
     assert.equal(limit,100);
     assert.deepEqual(scope,{stripeAccount:'acct_providerFixture'});
     assert.ok(['po_match','po_diff','po_more'].includes(payout));
+    if(starting_after){
+     assert.equal(payout,'po_more');
+     assert.equal(starting_after,'txn_reversal');
+     return {has_more:false,data:[{id:'txn_extra',currency:'usd',net:0}]};
+    }
     return {has_more:payout==='po_more',data:[{id:'txn_payout',source:'po_match',currency:'usd',net:-10000},
      {id:'txn_first',currency:'usd',net:12000},{id:'txn_reversal',currency:'usd',net:-2000}]
      .filter(entry=>payout==='po_match'||entry.id!=='txn_payout')};
@@ -292,11 +301,13 @@ export async function socialHttpChecks(t,pool){
    assert.equal(connectAccounts,1);
    assert.equal((await request(null,'services/connect/payouts')).status,401);
    assert.equal((await request(alice,'services/connect/payouts')).status,404);
-   const report=(await request(bob,'services/connect/payouts')).data.payouts;
-   assert.deepEqual(report.map(item=>item.reconciliation),['matched','mismatch','unsupported','pending','more_entries']);
+   const {payouts:report,balance}= (await request(bob,'services/connect/payouts')).data;
+   assert.deepEqual(balance,{availableCents:0,pendingCents:10000});
+   assert.deepEqual(report.map(item=>item.reconciliation),['matched','mismatch','unsupported','pending','matched']);
    assert.equal(report[0].fundingCents,10000);
    assert.equal(report[0].entries,2);
-   assert.equal(report[4].fundingCents,null);
+   assert.equal(report[4].fundingCents,10000);
+   assert.equal(report[4].entries,3);
    sandboxEnabled=false;
    assert.equal((await request(bob,'services/connect/payouts')).status,503);
    sandboxEnabled=true;
