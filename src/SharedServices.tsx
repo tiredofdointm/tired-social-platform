@@ -4,7 +4,9 @@ import type {FormEvent, ReactNode} from 'react';
 const categories = ['Photography', 'DJ', 'Security', 'Other'];
 type Listing = {id:string; title:string; category:string; description:string};
 type DirectoryEntry = Listing & {display_name:string; handle:string; owned:boolean; availability:{id:string;start:string}[]};
-type Booking = {request_id:string; starts_at:string; title:string; counterpart:string; provider:boolean; confirmed:boolean};
+type BookingQuote = {serviceCents:number;feeCents:number;totalCents:number};
+const usd = new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'});
+type Booking = {request_id:string; starts_at:string; title:string; counterpart:string; provider:boolean; confirmed:boolean;quote:BookingQuote|null};
 type Publication = 'published' | 'pending' | 'rejected';
 type Publishing = {
   manual_review:boolean;
@@ -14,7 +16,7 @@ type Publishing = {
 };
 type View =
   | {kind:'loading' | 'preview' | 'signed-out' | 'error'}
-  | {kind:'ready'; csrf:string; listings:DirectoryEntry[]; bookings:Booking[]; publishing:Publishing};
+  | {kind:'ready'; csrf:string; listings:DirectoryEntry[]; bookings:Booking[]; quotesEnabled:boolean; publishing:Publishing};
 
 class DirectoryError extends Error {
   constructor(readonly status:number) { super('Could not load or save services.'); }
@@ -53,9 +55,9 @@ export function SharedServices({preview, onPreviewMode}:{
         const [directory, publishing, reservations] = await Promise.all([
           get<{listings:DirectoryEntry[]}>('services', signal),
           get<Publishing>('services/publishing', signal),
-          get<{bookings:Booking[]}>('services/bookings', signal),
+          get<{bookings:Booking[];quotesEnabled:boolean}>('services/bookings', signal),
         ]);
-        if (!signal.aborted) setView({kind:'ready', csrf:session.csrfToken, listings:directory.listings, bookings:reservations.bookings, publishing});
+        if (!signal.aborted) setView({kind:'ready', csrf:session.csrfToken, listings:directory.listings, bookings:reservations.bookings,quotesEnabled:reservations.quotesEnabled, publishing});
       } catch (error) {
         if (!signal.aborted) setView({kind:error instanceof DirectoryError && error.status === 401 ? 'signed-out' : 'error'});
       }
@@ -180,8 +182,21 @@ export function SharedServices({preview, onPreviewMode}:{
         <h3>{booking.title}</h3>
         <p>{new Date(booking.starts_at).toLocaleString()} · 1 hour · {booking.counterpart}</p>
         <p>{booking.confirmed ? 'Confirmed' : 'Awaiting provider approval'}</p>
+        {booking.quote && <dl>
+          <dt>Sandbox service price</dt><dd>{usd.format(booking.quote.serviceCents/100)}</dd>
+          <dt>Platform fee</dt><dd>{usd.format(booking.quote.feeCents/100)}</dd>
+          <dt>Total quote</dt><dd>{usd.format(booking.quote.totalCents/100)}</dd>
+        </dl>}
         {Date.parse(booking.starts_at)>Date.now() && <div className="actions">
-          {booking.provider && !booking.confirmed && <button disabled={busy} onClick={() => void change('/bookings/'+booking.request_id+'/confirm','POST',undefined,()=>'Booking confirmed.')}>Confirm request</button>}
+          {booking.provider && !booking.confirmed && <form onSubmit={event=>{
+            event.preventDefault();
+            const amount=new FormData(event.currentTarget).get('price');
+            void change('/bookings/'+booking.request_id+'/confirm','POST',
+              amount?{servicePriceCents:Math.round(Number(amount)*100)}:undefined,()=>'Booking confirmed.');
+          }}>
+            {view.quotesEnabled && <label>Sandbox service price (USD, optional)<input name="price" type="number" min="0.50" max="999999.99" step="0.01"/></label>}
+            <button disabled={busy}>Confirm request</button>
+          </form>}
           <button disabled={busy} onClick={() => void change('/bookings/'+booking.request_id+'/cancel','POST',undefined,()=>'Booking canceled.')}>Cancel booking</button>
         </div>}
       </article>)}
