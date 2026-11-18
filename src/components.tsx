@@ -1,12 +1,12 @@
 import {useEffect,useId,useRef,useState} from 'react';
 import type {ReactNode,InputHTMLAttributes,FormEvent} from 'react';
-export function Button({children,onClick,className='',disabled=false}:{children:ReactNode;onClick:()=>void;className?:string;disabled?:boolean}){
- return <button type="button" className={className} onClick={onClick} disabled={disabled}>{children}</button>;
+export function Button({children,onClick,className='',disabled=false,label,pressed,description}:{children:ReactNode;onClick:()=>void;className?:string;disabled?:boolean;label?:string;pressed?:boolean;description?:string}){
+ return <button type="button" className={className} onClick={onClick} disabled={disabled} aria-label={label} aria-pressed={pressed} aria-describedby={description}>{children}</button>;
 }
 export function Heading({title,sub,action}:{title:string;sub:string;action?:ReactNode}){
  return <div className="page-title"><div><span className="eyebrow">YOUR NEXT GOOD THING</span><h1>{title}</h1><p>{sub}</p></div>{action}</div>;
 }
-export function Empty({title,body}:{title:string;body:string}){return <div className="empty"><h3>{title}</h3><p>{body}</p></div>;}
+export function Empty({title,body}:{title:string;body:string}){return <div className="empty"><strong>{title}</strong><p>{body}</p></div>;}
 type FieldProps=InputHTMLAttributes<HTMLInputElement>&{label:string;multiline?:boolean};
 export function Field({label,multiline=false,...props}:FieldProps){
  const id=useId();
@@ -23,7 +23,7 @@ export function Form({children,submit,onSubmit,className='',id}:{children:ReactN
 export function Dialog({title,children,onClose}:{title:string;children:ReactNode;onClose:()=>void}){
  const ref=useRef<HTMLDialogElement>(null),id=useId();
  useEffect(()=>{const el=ref.current!;el.showModal();return()=>{if(el.open)el.close();};},[]);
- return <dialog ref={ref} aria-labelledby={id} onCancel={onClose}><div className="modal-head"><h2 id={id}>{title}</h2><Button className="ghost" onClick={onClose}>✕</Button></div>{children}</dialog>;
+ return <dialog ref={ref} aria-labelledby={id} onCancel={onClose}><div className="modal-head"><h2 id={id}>{title}</h2><Button className="ghost" label="Close dialog" onClick={onClose}>✕</Button></div>{children}</dialog>;
 }
 export const money=(n:number)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(n);
 export const cents=(n:number)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(n/100);

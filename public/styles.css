@@ -55,3 +55,49 @@ body[data-density=compact] .panel,body[data-density=compact] .card-body{padding:
   .sidebar .nav-open { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: visible; gap: 6px; }
   .sidebar .nav button { white-space: normal; min-height: 44px; }
 }
+
+/* Text accents need a darker shade on light surfaces. Filled controls keep their accent. */
+body { --accent-text: var(--accent); }
+body[data-theme=light] { --accent-text: #354b0b; --focus: var(--accent-text); }
+body[data-theme=light][data-accent=violet] { --accent-text: #543b8c; }
+body[data-theme=light][data-accent=peach] { --accent-text: #803d1b; }
+.eyebrow, .status, .logo span, .avatar, .nav .selected { color: var(--accent-text); }
+body[data-theme=light] .error { color: #9e3021; }
+:where(#events-heading, .table-wrap):focus-visible {
+  outline: 3px solid var(--focus, var(--accent));
+  outline-offset: 3px;
+}
+#events-heading { scroll-margin-top: 1rem; }
+.sidebar { overflow-y: auto; }
+.topbar, .top-actions { flex-wrap: wrap; }
+.top-actions { margin-inline-start: auto; }
+.account-control span { white-space: normal; overflow-wrap: anywhere; }
+.search { flex: 1 1 16rem; }
+.page-title > div, .plan-card > div, .post-head > .grow { min-width: 0; }
+:is(.sidebar-bottom, .panel, .card-body, dialog, .poster) { overflow-wrap: anywhere; }
+.post-actions, .card-footer { flex-wrap: wrap; }
+.field :is(input, textarea, select) { width: 100%; }
+.poster strong, .poster small {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+}
+.table-wrap > .table { min-width: 30rem; }
+.table th[scope="row"] { color: var(--text); font-size: inherit; text-transform: none; }
+.stat-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 1150px) {
+  .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 870px) and (min-width: 761px) {
+  .grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 540px) {
+  .page-title, .plan-card { flex-direction: column; align-items: flex-start; }
+}
+
+.stat strong.stat-text { font-size: 1rem; overflow-wrap: normal; }
+.empty > strong { display: block; margin-bottom: 0.4rem; font-size: 1.15rem; }
+@media (max-width: 400px) {
+  .hero-copy h1 { font-size: 34px; }
+}
