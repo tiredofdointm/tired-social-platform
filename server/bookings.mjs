@@ -1,3 +1,5 @@
+import {bookingCheckout} from './booking-payments.mjs';
+
 export function sandboxBookingFee(connect, env=process.env){
   const value=env.STRIPE_BOOKING_TEST_FEE_BPS;
   if(!connect || value===undefined)return null;
@@ -5,19 +7,28 @@ export function sandboxBookingFee(connect, env=process.env){
   return Number(value);
 }
 
-export async function bookingRoutes({pool, actor, path, method, req, send, fail, readJson, fields, uuid, bookingFeeBps=null}) {
+export async function bookingRoutes({pool, actor, path, method, req, send, fail, readJson, fields, uuid, bookingFeeBps=null,connect,origin}) {
   const base = '/api/v1/services';
   if (path === base + '/bookings' && method === 'GET') {
     const {rows} = await pool.query(`SELECT s.request_id, s.starts_at, s.confirmed, l.title,
+      CASE WHEN $2::boolean THEN b.state END AS payment_state,
       CASE WHEN $2::boolean AND s.quoted_service_cents IS NOT NULL THEN json_build_object(
         'serviceCents',s.quoted_service_cents,'feeCents',s.quoted_fee_cents,
         'totalCents',s.quoted_service_cents+s.quoted_fee_cents) END AS quote,
       s.provider_id=$1 AS provider, p.display_name AS counterpart
       FROM service_slots s JOIN service_listings l ON l.id=s.listing_id
+      LEFT JOIN booking_payments b ON b.request_id=s.request_id
       JOIN profiles p ON p.user_id=CASE WHEN s.provider_id=$1 THEN s.customer_id ELSE s.provider_id END
       WHERE s.customer_id IS NOT NULL AND $1 IN (s.provider_id,s.customer_id)
       AND s.starts_at + interval '1 hour' > now() ORDER BY s.starts_at`, [actor,bookingFeeBps!==null]);
     send(200, {bookings:rows,quotesEnabled:bookingFeeBps!==null});
+    return true;
+  }
+  const checkout=/^\/api\/v1\/services\/bookings\/([^/]+)\/checkout$/.exec(path);
+  if(checkout && method==='POST'){
+    if(!uuid(checkout[1]))fail(404,'not_found');
+    if(!connect || bookingFeeBps===null)fail(503,'sandbox_booking_checkout_unavailable');
+    await bookingCheckout({pool,connect,actor,id:checkout[1],origin,send,fail});
     return true;
   }
   const match = /^\/api\/v1\/services\/(listings|slots|bookings)\/([^/]+)\/(availability|request|remove|confirm|cancel)$/.exec(path);
@@ -65,7 +76,7 @@ export async function bookingRoutes({pool, actor, path, method, req, send, fail,
   } else if (resource === 'bookings' && action === 'cancel') {
     result = await pool.query(`UPDATE service_slots SET confirmed=false, customer_id=NULL, request_id=NULL,
         quoted_service_cents=NULL, quoted_fee_cents=NULL
-      WHERE request_id=$2 AND $1 IN (provider_id,customer_id) AND starts_at>now() RETURNING id`,[actor,id]);
+      WHERE request_id=$2 AND $1 IN (provider_id,customer_id) AND starts_at>now() AND NOT payment_locked RETURNING id`,[actor,id]);
   } else return false;
   if (!result.rowCount) fail(409,'unavailable');
   send(200,result.rows[0]);
