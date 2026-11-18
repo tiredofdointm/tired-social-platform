@@ -420,3 +420,11 @@ Next: T02. Build event-owner guest lists and single-use check-in in the sandbox,
 Migration 009 records the first successful check-in. Owners can open their sandbox guest list, enter a buyer's ticket code and review check-in counts and net test sales. A full refund removes the ticket from the active guest list and makes its code invalid. Owners and attendees with issued tickets can access these event cards for 24 hours after the event starts.
 
 Next: verify migration replay, owner permissions and the two-browser and simultaneous check-in journeys in CI. Apply migration 009 and exercise check-in on the tagged sandbox revision before advancing T02. Migration 010 separates check-in codes from organizer refund references. Organizers can request the remaining sandbox refund from the guest list. Stripe confirmation updates the order, removes it from the guest list, and restores inventory. Apply migrations 009 and 010 and verify both organizer actions on the tagged sandbox revision.
+
+## Organizer operations rollout verified
+
+PR #7 merged at `1ee3b3d9b0066d5a2c545c6282ebcb2787d268f5`. All three CI workflows passed. Cloud Run migration execution `tired-social-migrate-jvt7j` completed, and the user confirmed the sandbox purchase, single-use check-in, and organizer refund journey on `tired-social-platform-00036-gab`. Net test sales and guest-list reconciliation were verified in CI.
+
+Cloud Shell reported 100% production traffic on `tired-social-platform-00037-nix` and a healthy response from the same revision on `tired.events`. The production candidate passed the Google callback and disabled sandbox webhook checks before promotion. Rollback revision is `tired-social-platform-00033-raf`.
+
+Next: M02, Stripe Connect sandbox onboarding, fee disclosure, and payout reconciliation. Live ticket payments remain disabled.
