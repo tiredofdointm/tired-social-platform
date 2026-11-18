@@ -52,14 +52,21 @@ export function Settings({onAppearancePreview}:{onAppearancePreview:(value:Appea
  const {state,update,open,notify}=useApp();
  const [appearanceReset,setAppearanceReset]=useState(0);
  useEffect(()=>()=>onAppearancePreview(null),[onAppearancePreview]);
- function resetAppearance(){
-  update(s=>{Object.assign(s.prefs,DEFAULT_APPEARANCE);},'Default appearance restored');
+ function restoreAppearanceFields(){
   onAppearancePreview(null);
   setAppearanceReset(count=>count+1);
+ }
+ function discardAppearance(){
+  restoreAppearanceFields();
+  notify('Saved appearance restored');
+ }
+ function resetAppearance(){
+  update(s=>{Object.assign(s.prefs,DEFAULT_APPEARANCE);},'Default appearance restored');
+  restoreAppearanceFields();
  }
  function exportData(){const url=URL.createObjectURL(new Blob([JSON.stringify(state,null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download='tired-preview-data.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);notify('Preview data exported');}
  return <><Heading title="Make it feel like you." sub="A little more control over your corner of the internet."/><Form id="settings-form" submit="Save changes" onSubmit={data=>update(s=>{s.profile={name:data.name.trim()||'You',bio:data.bio};s.prefs={...readAppearance(data),review:data.review==='on'};},'Your settings are saved')}><div className="settings-grid"><section className="panel"><h2>Your profile</h2><Field label="Display name" name="name" defaultValue={state.profile.name} maxLength={50} required/><Field label="Bio" name="bio" defaultValue={state.profile.bio} multiline maxLength={300}/><p className="small">Profile settings apply to this browser preview.</p></section><section className="panel"><h2>Appearance</h2><p className="small">Preview changes here. Save to keep them.</p><div key={appearanceReset} onChange={event=>{
  const form=event.currentTarget.closest('form');
  if(form)onAppearancePreview(readAppearance(Object.fromEntries(new FormData(form))));
-}}><Select label="Theme" name="theme" options={['dark','light','system']} value={state.prefs.theme}/><Select label="Accent" name="accent" options={['lime','violet','peach']} value={state.prefs.accent}/><Select label="Density" name="density" options={['comfortable','compact']} value={state.prefs.density}/><label className="inline-label"><input name="motion" type="checkbox" defaultChecked={state.prefs.motion}/>Enable interface transitions</label></div><Button className="ghost" onClick={resetAppearance}>Reset appearance</Button></section><section className="panel"><h2>Publishing controls</h2><label className="inline-label"><input name="review" type="checkbox" defaultChecked={state.prefs.review}/>Require approval for new event listings</label><p className="small">Off by default. This simulates an admin setting locally; production permissions are not implemented yet.</p></section><section className="panel"><h2>Your preview data</h2><p>Export your local drafts and settings, or start again with the sample community.</p><div className="actions"><Button className="ghost" onClick={exportData}>Export data</Button><Button className="ghost" onClick={()=>open({kind:'reset'})}>Reset preview</Button></div></section></div></Form></>;
+}}><Select label="Theme" name="theme" options={['dark','light','system']} value={state.prefs.theme}/><Select label="Accent" name="accent" options={['lime','violet','peach']} value={state.prefs.accent}/><Select label="Density" name="density" options={['comfortable','compact']} value={state.prefs.density}/><label className="inline-label"><input name="motion" type="checkbox" defaultChecked={state.prefs.motion}/>Enable interface transitions</label></div><div className="actions"><Button className="ghost" onClick={discardAppearance}>Discard appearance changes</Button><Button className="ghost" onClick={resetAppearance}>Reset appearance</Button></div></section><section className="panel"><h2>Publishing controls</h2><label className="inline-label"><input name="review" type="checkbox" defaultChecked={state.prefs.review}/>Require approval for new event listings</label><p className="small">Off by default. This simulates an admin setting locally; production permissions are not implemented yet.</p></section><section className="panel"><h2>Your preview data</h2><p>Export your local drafts and settings, or start again with the sample community.</p><div className="actions"><Button className="ghost" onClick={exportData}>Export data</Button><Button className="ghost" onClick={()=>open({kind:'reset'})}>Reset preview</Button></div></section></div></Form></>;
 }
