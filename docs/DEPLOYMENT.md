@@ -18,6 +18,14 @@ Build the exact reviewed commit and deploy its immutable Artifact Registry diges
 
 ## Release and rollback
 
+Run the release from a signed-in Cloud Shell checkout with Node 22, curl, and jq available. Pass the revision currently serving production and the immutable image digest from the successful staging build.
+
+```bash
+bash scripts/release-production.sh PREVIOUS_REVISION sha256:STAGING_IMAGE_DIGEST
+```
+
+The script performs the following sequence.
+
 1. Capture the current production revision. Deploy the candidate under `public-check` at zero production traffic with `PUBLIC_ORIGIN=https://tired.events`. Disable the Stripe sandbox flags and remove sandbox secret references from the candidate.
 2. Check the tagged candidate's `/api/health`, Google OAuth redirect configuration, and disabled sandbox webhook. Compare the revision and image digest with the intended build.
 3. Assign production traffic to the explicit candidate revision. Run the **Production smoke checks** GitHub Actions workflow with the candidate revision, or run `EXPECTED_CLOUD_RUN_REVISION=tired-social-platform-REVISION node scripts/check-production.mjs` from an external network.
