@@ -14,6 +14,7 @@ export function SharedEvents(){
  const [token,setToken]=useState('');
  const [state,setState]=useState('loading');
  const [message,setMessage]=useState('');
+ const [checkoutStatus,setCheckoutStatus]=useState<{id:string;text:string;url?:string}|null>(null);
  const [busy,setBusy]=useState(false);
  const [kind,setKind]=useState('events');
 
@@ -118,10 +119,18 @@ export function SharedEvents(){
     {event.my_hold_until && <p>Held until {new Date(event.my_hold_until).toLocaleTimeString()}.</p>}
     {event.ticket_state==='issued' && <p>Your test ticket is confirmed.</p>}
     {event.ticket_state==='refunded' && <p>Your previous ticket was refunded.</p>}
-    {checkoutEnabled && (event.my_hold_until || event.ticket_state==='open') && <button disabled={busy} onClick={()=>void action(async()=>{
-     const result=await api<{url:string}>('events/'+event.id+'/checkout','POST');
-     window.location.assign(result.url);
-    },'Opening Stripe test checkout…')}>{event.ticket_state==='open'?'Resume test checkout':'Open test checkout'}</button>}
+    {checkoutEnabled && (event.my_hold_until || event.ticket_state==='open') && <button disabled={busy} onClick={async()=>{
+     setBusy(true);
+     setCheckoutStatus({id:event.id,text:'Contacting Stripe…'});
+     try{
+      const {url}=await api<{url:string}>('events/'+event.id+'/checkout','POST');
+      setCheckoutStatus({id:event.id,text:'Test checkout is ready.',url});
+      window.location.assign(url);
+     }catch(error){
+      setCheckoutStatus({id:event.id,text:'Checkout could not open: '+(error as Error).message});
+     }finally{setBusy(false);}
+    }}>{event.ticket_state==='open'?'Resume test checkout':'Open test checkout'}</button>}
+    {checkoutStatus?.id===event.id && <p role="status">{checkoutStatus.text}{checkoutStatus.url && <> <a href={checkoutStatus.url} target="_blank" rel="noopener noreferrer">Open Stripe in a new tab</a></>}</p>}
     {event.ticket_state!=='issued' && event.ticket_state!=='open' && <button aria-describedby={`event-title-${event.id}`} disabled={busy} onClick={()=>void action(
      ()=>api('events/'+event.id+'/ticket-hold',event.my_hold_until?'DELETE':'PUT'),
      event.my_hold_until?'Hold released.':'Test ticket held.'
