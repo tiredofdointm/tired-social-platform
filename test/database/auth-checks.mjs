@@ -15,8 +15,16 @@ export async function authChecks(t,pool){
   const base=`http://127.0.0.1:${server.address().port}`;
   const request=(path,options={})=>fetch(base+path,{redirect:'manual',...options});
   const cookieValue=(res,name)=>res.headers.getSetCookie().find(c=>c.startsWith(name+'='))?.split(';')[0];
-  async function begin(){const res=await request('/auth/google');assert.equal(res.status,302);assert.match(res.headers.get('set-cookie'),/HttpOnly; Secure; SameSite=Lax/);return {state:new URL(res.headers.get('location')).searchParams.get('state'),cookie:cookieValue(res,LOGIN_COOKIE)};}
-  const callback=(a,code,extra='')=>request(`/auth/google/callback?state=${a.state}&code=${code}`,{headers:{cookie:a.cookie+(extra?'; '+extra:'')}});
+  async function begin({page,cookie}={}){
+   const path=page?'/auth/google?'+new URLSearchParams({next:page}):'/auth/google';
+   const res=await request(path,{headers:cookie?{cookie}:{}});
+   assert.equal(res.status,302);
+   assert.match(res.headers.get('set-cookie'),/HttpOnly; Secure; SameSite=Lax/);
+   assert.equal(res.headers.get('referrer-policy'),'no-referrer');
+   return {state:new URL(res.headers.get('location')).searchParams.get('state'),cookie:cookieValue(res,LOGIN_COOKIE)};
+  }
+  const callback=(a,code,extra='',headers={})=>request('/auth/google/callback?'+new URLSearchParams({state:a.state,code}),
+   {headers:{cookie:a.cookie+(extra?'; '+extra:''),...headers}});
   try{
    assert.equal((await request('/api/v1/me')).status,401);
    const a=await begin(),b=await begin();
@@ -43,6 +51,26 @@ export async function authChecks(t,pool){
    assert.equal((await me(rotated)).status,401);assert.equal((await callback(await begin(),'bob')).status,403);
    const expired=await begin();await pool.query("UPDATE oauth_login_attempts SET created_at=now()-interval '20 minutes',expires_at=now()-interval '1 minute' WHERE state_hash=$1",[digest(expired.state)]);
    assert.equal((await callback(expired,'alice')).status,400);
+   const failedPage=await callback(expired,'sentinel-private-code','',{accept:'text/html'});
+   assert.equal(failedPage.status,400);
+   assert.equal(failedPage.headers.get('referrer-policy'),'no-referrer');
+   assert.equal(failedPage.headers.get('cache-control'),'no-store');
+   assert.match(failedPage.headers.get('content-type'),/^text\/html/);
+   const failureHtml=await failedPage.text();
+   assert.match(failureHtml,/Try Google sign-in again/);
+   assert.doesNotMatch(failureHtml,/sentinel-private-code/);
+   assert.equal(failedPage.headers.get('set-cookie'),null);
+
+   const talent=await begin({page:'talent'});
+   const events=await begin({page:'shared-events',cookie:talent.cookie});
+   assert.equal(talent.cookie,events.cookie);
+   assert.notEqual(talent.state,events.state);
+   const [talentResult,eventsResult]=await Promise.all([callback(talent,'alice'),callback(events,'alice')]);
+   assert.equal(talentResult.headers.get('location'),'/#talent');
+   assert.equal(eventsResult.headers.get('location'),'/#shared-events');
+   const unsafe=await callback(await begin({page:'https://elsewhere.example/'}),'alice');
+   assert.equal(unsafe.headers.get('location'),'/#community');
+
    const concurrent=await begin();const responses=await Promise.all([callback(concurrent,'alice'),callback(concurrent,'alice')]);assert.deepEqual(responses.map(r=>r.status).sort(),[302,400]);
    const invalid=await callback(await begin(),'invalid');assert.equal(invalid.status,401);assert.equal((await invalid.json()).error.code,'invalid_identity');
    const valid=await callback(await begin(),'alice'),session=cookieValue(valid,SESSION_COOKIE);
