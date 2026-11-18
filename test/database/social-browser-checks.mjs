@@ -10,12 +10,18 @@ export async function socialBrowserChecks(t,pool){
   const config={origin:''},repo=authRepository(pool);
   const alice=await repo.signIn({issuer:'browser-test',subject:'alice',name:'Browser Alice'});
   const bob=await repo.signIn({issuer:'browser-test',subject:'bob',name:'Browser Bob'});
-  const server=createServer({auth:createAuthHandler({config,pool,provider:{}}),social:createSocialHandler({config,pool,payments:{},bookingFeeBps:750})});
+  let pending = 10000;
+  const connect = {
+   accounts:{retrieve:async()=>({capabilities:{transfers:'active'},payouts_enabled:true,details_submitted:true})},
+   balance:{retrieve:async()=>({livemode:false,pending:[{currency:'usd',amount:pending}],available:[{currency:'usd',amount:10000-pending}]})},
+   payouts:{list:async()=>({data:[]})}
+  };
+  const server=createServer({auth:createAuthHandler({config,pool,provider:{}}),social:createSocialHandler({config,pool,connect,payments:{},bookingFeeBps:750})});
   await new Promise(r=>server.listen(0,'127.0.0.1',r));config.origin=`http://127.0.0.1:${server.address().port}`;
   let browser;
   try{
    browser=await chromium.launch({headless:true});
-   // Only identity bootstrapping is test-only. UI requests, CSRF, APIs and PostgreSQL are real.
+   // Google identities and Stripe responses are fixtures. HTTP requests and PostgreSQL are real.
    const a=await browser.newPage({extraHTTPHeaders:{cookie:`${SESSION_COOKIE}=${alice.token}`}});
    const b=await browser.newPage({extraHTTPHeaders:{cookie:`${SESSION_COOKIE}=${bob.token}`}});
    async function navigate(page, name){
@@ -158,6 +164,18 @@ export async function socialBrowserChecks(t,pool){
    await a.getByLabel('Description',{exact:true}).fill('Photography for concerts and meetups.');
    await a.getByRole('button',{name:'Publish service',exact:true}).click();
    await a.getByText('Service published.',{exact:true}).waitFor();
+   await pool.query("INSERT INTO provider_connect_accounts(provider_id,stripe_account_id) VALUES($1,'acct_browserProvider')",[alice.userId]);
+   await a.reload();
+   await a.getByText('Sandbox payouts',{exact:true}).click();
+   await a.getByRole('button',{name:'Load payouts',exact:true}).click();
+   const balances=a.locator('dl').filter({hasText:'Pending USD balance'});
+   await balances.getByText('$100.00',{exact:true}).waitFor();
+   assert.deepEqual(await balances.locator('dd').allTextContents(),['$100.00','$0.00']);
+   await a.getByText('No payouts recorded in this sandbox account.',{exact:true}).waitFor();
+   pending=0;
+   await a.getByRole('button',{name:'Refresh payouts',exact:true}).click();
+   await balances.locator('dd').nth(1).filter({hasText:'$100.00'}).waitFor();
+   assert.deepEqual(await balances.locator('dd').allTextContents(),['$0.00','$100.00']);
    await navigate(b,'Find talent');
    const service=b.getByRole('heading',{name:serviceTitle,exact:true});
    await service.waitFor();
