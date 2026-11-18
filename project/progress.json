@@ -5,7 +5,7 @@
   "currentSession": {
     "primaryTask": "U02",
     "nextTask": "U02",
-    "reason": "Review mobile page navigation and signed-in Community and Events before deployment."
+    "reason": "Stage the verified mobile navigation and signed-in Community and Events updates, then continue the accessibility review."
   },
   "workInProgressLimit": 1,
   "tasks": [
@@ -117,7 +117,9 @@
       "acceptance": "Rendered screens inspected; keyboard, focus, contrast and layout findings fixed or documented.",
       "evidence": [
         "https://github.com/tiredofdointm/tired-social-platform/actions/runs/44213250297",
-        "https://github.com/tiredofdointm/tired-social-platform/actions/runs/44213250421"
+        "https://github.com/tiredofdointm/tired-social-platform/actions/runs/44213250421",
+        "https://github.com/tiredofdointm/tired-social-platform/actions/runs/44219855857",
+        "https://github.com/tiredofdointm/tired-social-platform/actions/runs/44219877901"
       ],
       "workstream": "U"
     },
