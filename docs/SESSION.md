@@ -414,3 +414,9 @@ Sandbox Checkout purchase and full refund succeeded in the staging journey repor
 Cloud Shell confirmed that `tired-social-platform-00033-raf` serves 100% of traffic and that `https://tired.events/api/health` reports that revision healthy. The candidate used the production Google callback and returned `sandbox_checkout_unavailable` for the ticket webhook before promotion. The public build hides test tickets. Rollback revision: `tired-social-platform-bookings-84b6e68`.
 
 Next: T02. Build event-owner guest lists and single-use check-in in the sandbox, then verify that a refund invalidates a ticket and that simultaneous scans cannot both check it in. Live Stripe setup is pending.
+
+## Organizer check-in in development
+
+Migration 009 records the first successful check-in. Owners can open their sandbox guest list, enter a buyer's ticket code and review check-in counts and net test sales. A full refund removes the ticket from the active guest list and makes its code invalid. Owners and attendees with issued tickets can access these event cards for 24 hours after the event starts.
+
+Next: verify migration replay, owner permissions and the two-browser and simultaneous check-in journeys in CI. Apply migration 009 and exercise check-in on the tagged sandbox revision before advancing T02. Organizer-initiated refunds are still pending.
