@@ -6,7 +6,7 @@ type Listing = {id:string; title:string; category:string; description:string};
 type DirectoryEntry = Listing & {display_name:string; handle:string; owned:boolean; availability:{id:string;start:string}[]};
 type BookingQuote = {serviceCents:number;feeCents:number;totalCents:number};
 const usd = new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'});
-type Booking = {request_id:string; starts_at:string; title:string; counterpart:string; provider:boolean; confirmed:boolean;quote:BookingQuote|null};
+type Booking = {request_id:string; starts_at:string; title:string; counterpart:string; provider:boolean; confirmed:boolean;quote:BookingQuote|null;payment_state:string|null};
 type Publication = 'published' | 'pending' | 'rejected';
 type Publishing = {
   manual_review:boolean;
@@ -187,6 +187,7 @@ export function SharedServices({preview, onPreviewMode}:{
           <dt>Platform fee</dt><dd>{usd.format(booking.quote.feeCents/100)}</dd>
           <dt>Total quote</dt><dd>{usd.format(booking.quote.totalCents/100)}</dd>
         </dl>}
+        {booking.quote && <BookingCheckout booking={booking} csrf={view.csrf}/>}
         {Date.parse(booking.starts_at)>Date.now() && <div className="actions">
           {booking.provider && !booking.confirmed && <form onSubmit={event=>{
             event.preventDefault();
@@ -197,7 +198,7 @@ export function SharedServices({preview, onPreviewMode}:{
             {view.quotesEnabled && <label>Sandbox service price (USD, optional)<input name="price" type="number" min="0.50" max="999999.99" step="0.01"/></label>}
             <button disabled={busy}>Confirm request</button>
           </form>}
-          <button disabled={busy} onClick={() => void change('/bookings/'+booking.request_id+'/cancel','POST',undefined,()=>'Booking canceled.')}>Cancel booking</button>
+          {!['open','paid'].includes(booking.payment_state??'') && <button disabled={busy} onClick={() => void change('/bookings/'+booking.request_id+'/cancel','POST',undefined,()=>'Booking canceled.')}>Cancel booking</button>}
         </div>}
       </article>)}
     </section>}
@@ -269,4 +270,33 @@ function ProviderConnect({csrf}:{csrf:string}){
   }}>{busy?'Opening Stripe…':status.connected?'Continue Stripe onboarding':'Start Stripe onboarding'}</button>
   {message && <p role="status">{message}</p>}
  </section>;
+}
+
+
+function BookingCheckout({booking,csrf}:{booking:Booking;csrf:string}){
+ const [message,setMessage]=useState('');
+ const [url,setUrl]=useState('');
+ const [busy,setBusy]=useState(false);
+ const paymentState=booking.payment_state;
+ return <>
+  {paymentState==='paid'&&<p>Sandbox payment confirmed.</p>}
+  {paymentState==='open'&&<p>Sandbox payment is open. Refresh bookings after paying.</p>}
+  {paymentState==='expired'&&<p>Sandbox checkout expired. Cancel and request the slot again to get a new quote.</p>}
+  {paymentState==='refunded'&&<p>Sandbox payment refunded.</p>}
+  {!booking.provider && Date.parse(booking.starts_at)>Date.now() && (!paymentState||paymentState==='open') && <button disabled={busy} onClick={async()=>{
+   setBusy(true);
+   setMessage('Contacting Stripe…');
+   setUrl('');
+   try{
+    const response=await fetch('/api/v1/services/bookings/'+booking.request_id+'/checkout',{method:'POST',headers:{'X-CSRF-Token':csrf}});
+    const result=await response.json();
+    if(!response.ok)throw Error(result.error?.message??'Checkout could not open.');
+    setUrl(result.url);
+    setMessage('Sandbox checkout is ready.');
+    window.location.assign(result.url);
+   }catch(error){setMessage((error as Error).message);}
+   finally{setBusy(false);}
+  }}>{paymentState==='open'?'Resume sandbox checkout':'Open sandbox checkout'}</button>}
+  {message && <p role="status">{message}{url && <> <a href={url} target="_blank" rel="noopener noreferrer">Open Stripe in a new tab</a></>}</p>}
+ </>;
 }
