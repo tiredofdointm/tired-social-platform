@@ -76,6 +76,43 @@ export async function socialHttpChecks(t,pool){
    assert.equal((await request(alice,reviewPath,'PUT',{decision:'published'})).status,200);
    assert.equal((await request(alice,reviewPath,'PUT',{decision:'rejected'})).status,404);
    assert.equal((await request(alice,'events/publishing','PUT',{manualReview:false})).status,200);
+   const service = {title:'Event photography',category:'Photography',description:'Two photographers for the evening.'};
+   assert.equal((await request(null,'services')).status,401);
+   assert.equal((await request(bob,'services','POST',{...service, owner_id:alice.userId})).status,400);
+   assert.equal((await request(bob,'services','POST',{...service, category:'Incorrect'})).status,400);
+   assert.equal((await request(bob,'services','POST',service,{'x-csrf-token':''})).status,403);
+   const published = await request(bob,'services','POST',service);
+   assert.equal(published.status,201);
+   assert.equal(published.data.publication,'published');
+   assert.ok((await request(alice,'services')).data.listings.some(row=>row.id===published.data.id));
+   assert.equal((await request(alice,'services/'+published.data.id,'DELETE')).status,404);
+   assert.equal((await request(bob,'services/publishing','PUT',{manualReview:true})).status,403);
+   assert.equal((await request(alice,'services/publishing','PUT',{manualReview:true})).status,200);
+   assert.equal((await request(alice,'events/publishing')).data.manual_review,false);
+   const submitted = await request(bob,'services','POST',{...service,title:'Pending provider'});
+   assert.equal(submitted.status,201);
+   assert.equal(submitted.data.publication,'pending');
+   assert.ok(!(await request(alice,'services')).data.listings.some(row=>row.id===submitted.data.id));
+   assert.ok((await request(bob,'services/publishing')).data.mine.some(row=>row.id===submitted.data.id));
+   assert.deepEqual((await request(bob,'services/publishing')).data.pending,[]);
+   assert.ok((await request(alice,'services/publishing')).data.pending.some(row=>row.id===submitted.data.id));
+   const serviceReview = 'services/'+submitted.data.id+'/review';
+   assert.equal((await request(bob,serviceReview,'PUT',{decision:'published'})).status,404);
+   const serviceReviews = await Promise.all([
+    request(alice,serviceReview,'PUT',{decision:'published'}),
+    request(alice,serviceReview,'PUT',{decision:'published'}),
+   ]);
+   assert.deepEqual(serviceReviews.map(result=>result.status).sort(),[200,404]);
+   assert.ok((await request(alice,'services')).data.listings.some(row=>row.id===submitted.data.id));
+   const rejected = await request(bob,'services','POST',{...service,title:'Another submission'});
+   assert.equal((await request(alice,'services/'+rejected.data.id+'/review','PUT',{decision:'rejected'})).status,200);
+   assert.ok(!(await request(alice,'services')).data.listings.some(row=>row.id===rejected.data.id));
+   await request(alice,`blocks/${bob.userId}`,'PUT');
+   assert.deepEqual((await request(alice,'services')).data.listings,[]);
+   await request(alice,`blocks/${bob.userId}`,'DELETE');
+   assert.equal((await request(bob,'services/'+submitted.data.id,'DELETE')).status,200);
+   assert.ok(!(await request(alice,'services')).data.listings.some(row=>row.id===submitted.data.id));
+   assert.equal((await request(alice,'services/publishing','PUT',{manualReview:false})).status,200);
    const rsvp='events/'+event.data.id+'/rsvp';
    const results=await Promise.all([request(alice,rsvp,'PUT'),request(bob,rsvp,'PUT')]);
    assert.deepEqual(results.map(result=>result.status).sort(),[200,409]);

@@ -1,3 +1,4 @@
+import {services} from './services.mjs';
 import {eventsPlans} from './events-plans.mjs';
 import {randomUUID} from 'node:crypto';
 import {authRepository,sessionTokenFrom,validMutation} from './auth.mjs';
@@ -24,7 +25,7 @@ export function createSocialHandler({config,pool}){
  let windowStart=Date.now(),writes=0;
  return async(req,res,url)=>{
   const path=url.pathname;
-  if(!/^\/api\/v1\/(feed|posts|profiles|follows|blocks|events|plans)(\/|$)/.test(path) && path!=='/api/v1/me/profile' && path!=='/api/v1/me/follow-requests')return false;
+  if(!/^\/api\/v1\/(feed|posts|profiles|follows|blocks|events|plans|services)(\/|$)/.test(path) && path!=='/api/v1/me/profile' && path!=='/api/v1/me/follow-requests')return false;
   const requestId=randomUUID();res.setHeader('Cache-Control','no-store');res.setHeader('X-Request-ID',requestId);
   function send(status,data){res.writeHead(status,{'Content-Type':'application/json'});res.end(JSON.stringify(data));}
   try{
@@ -38,6 +39,10 @@ export function createSocialHandler({config,pool}){
    }
    if(/^\/api\/v1\/(events|plans)(\/|$)/.test(path)){
     await eventsPlans({pool,actor,path,method,req,send,fail,readJson,fields,text,uuid});
+    return true;
+   }
+   if(/^\/api\/v1\/services(\/|$)/.test(path)){
+    await services({pool,actor,path,method,req,send,fail,readJson,fields,text,uuid});
     return true;
    }
    let match;

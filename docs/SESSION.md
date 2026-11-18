@@ -296,3 +296,22 @@ The unauthenticated staging probe still returned 404. Use the disposable
 database suite to verify application behavior locally. Deployment verification
 requires comparing the service URL and revision from the authenticated Cloud Run
 console, then probing /healthz with an identity that has invocation access.
+
+## Shared provider listings and live account checkpoint
+The user confirmed that signing in on tired.events returned to Community and
+displayed their Google account name. Production Cloud Run revision
+tired-social-platform-00012-7v4 serves Google mode. The migration execution
+tired-social-migrate-52lww confirmed schema version 4. A second real Google
+account and logout revocation remain unverified. Staging and production Cloud
+Build runs for the JSX fix succeeded.
+
+The provider listings branch adds migration 005, signed-in directory and
+owner withdrawal, and an independent service publishing policy. Existing
+publishing admins can review pending service submissions. Signed-out users
+see a sign-in prompt in Google mode, and preview mode retains the demo directory.
+Service listings do not process bookings or payments.
+
+Next: review PostgreSQL and browser CI on the provider listings branch. Run
+migration 005 with the candidate image before promoting a revision that exposes
+the new directory. Keep the existing live revision serving until the candidate
+is verified. Follow the separate two-account identity verification when possible.
