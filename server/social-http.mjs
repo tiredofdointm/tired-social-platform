@@ -1,5 +1,5 @@
 import {sandboxBookingFee} from './bookings.mjs';
-import {testConnect,providerConnect} from './provider-connect.mjs';
+import {testConnect,providerConnect,providerPayouts} from './provider-connect.mjs';
 import {testPayments,ticketWebhook} from './ticket-checkout.mjs';
 import {services} from './services.mjs';
 import {eventsPlans} from './events-plans.mjs';
@@ -44,6 +44,10 @@ export function createSocialHandler({config,pool,payments=testPayments(),connect
    }
    if(/^\/api\/v1\/(events|plans)(\/|$)/.test(path)){
     await eventsPlans({pool,payments,origin:config.origin,actor,path,method,req,send,fail,readJson,fields,text,uuid});
+    return true;
+   }
+   if(path==='/api/v1/services/connect/payouts'){
+    await providerPayouts({pool,connect,actor,method,send,fail});
     return true;
    }
    if(path==='/api/v1/services/connect'){
