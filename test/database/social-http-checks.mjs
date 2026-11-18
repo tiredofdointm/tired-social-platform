@@ -16,6 +16,7 @@ export async function socialHttpChecks(t,pool){
   payments.sessions={
    create:async params=>{
     created={id:'cs_test_'+params.metadata.tired_ticket_order,metadata:params.metadata,livemode:false,status:'open',url:'https://checkout.stripe.com/c/pay/test'};
+    assert.equal(params.payment_method_types,undefined);
     assert.deepEqual(params.metadata,params.payment_intent_data.metadata);
     assert.equal(params.line_items[0].price_data.unit_amount,1500);
     return created;
@@ -119,7 +120,9 @@ export async function socialHttpChecks(t,pool){
    const state=async()=>(await request(buyer,'events')).data.events.find(row=>row.id===paid.data.id).ticket_state;
    assert.equal(await notify('checkout.session.completed',payment(),false),400);
    assert.equal(await state(),'open');
-   for(let i=0;i<2;i++)assert.equal(await notify('checkout.session.completed',payment()),200);
+   assert.equal(await notify('checkout.session.completed',{...payment(),payment_status:'unpaid'}),200);
+   assert.equal(await state(),'open');
+   for(let i=0;i<2;i++)assert.equal(await notify('checkout.session.async_payment_succeeded',payment()),200);
    assert.equal(await state(),'issued');
    assert.equal(await notify('charge.refunded',{...charge(),amount_refunded:500}),200);
    assert.equal(await state(),'issued');
@@ -130,6 +133,9 @@ export async function socialHttpChecks(t,pool){
    assert.equal((await request(waitingBuyer,checkoutPath,'POST')).status,200);
    assert.equal(await notify('charge.refunded',charge()),200);
    assert.equal(await notify('checkout.session.completed',payment()),200);
+   assert.equal((await request(buyer,holdPath,'PUT')).status,200);
+   assert.equal((await request(buyer,checkoutPath,'POST')).status,200);
+   assert.equal(await notify('checkout.session.async_payment_failed',created),200);
    assert.equal((await request(buyer,holdPath,'PUT')).status,200);
    assert.equal((await request(buyer,checkoutPath,'POST')).status,200);
    assert.equal(await notify('checkout.session.expired',created),200);
