@@ -5,7 +5,7 @@
   "currentSession": {
     "primaryTask": null,
     "nextTask": "U02",
-    "reason": "Cloud SQL schema version 5 and production revision tired-social-platform-00016-qiz verified. Provider directory published; next verify the rendered desktop and mobile experience."
+    "reason": "Provider directory desktop and mobile screenshots reviewed, and browser checks passed down to 320px. The polish is in draft PR 1. Remaining U02 work is the review of other rendered journeys."
   },
   "workInProgressLimit": 1,
   "tasks": [
@@ -115,7 +115,10 @@
         "U01"
       ],
       "acceptance": "Rendered screens inspected; keyboard, focus, contrast and layout findings fixed or documented.",
-      "evidence": [],
+      "evidence": [
+        "https://github.com/tiredofdointm/tired-social-platform/actions/runs/44213250297",
+        "https://github.com/tiredofdointm/tired-social-platform/actions/runs/44213250421"
+      ],
       "workstream": "U"
     },
     {
