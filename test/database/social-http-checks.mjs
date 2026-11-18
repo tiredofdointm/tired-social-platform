@@ -1,3 +1,5 @@
+import Stripe from 'stripe';
+import {testPayments} from '../../server/ticket-checkout.mjs';
 import assert from 'node:assert/strict';
 import {createServer} from '../../server.mjs';
 import {authRepository,createAuthHandler,SESSION_COOKIE} from '../../server/auth.mjs';
@@ -8,7 +10,19 @@ export async function socialHttpChecks(t,pool){
   const identities=authRepository(pool);
   const alice=await identities.signIn({issuer:'social-test',subject:'alice',name:'Alice'});
   const bob=await identities.signIn({issuer:'social-test',subject:'bob',name:'Bob'});
-  const server=createServer({auth:createAuthHandler({config,pool,provider:{}}),social:createSocialHandler({config,pool})});
+  const secret='whsec_local_fixture';
+  const payments=testPayments({STRIPE_TEST_SECRET_KEY:'sk_test_fixture',STRIPE_TEST_WEBHOOK_SECRET:secret});
+  let created;
+  payments.sessions={
+   create:async params=>{
+    created={id:'cs_test_'+params.metadata.tired_ticket_order,metadata:params.metadata,livemode:false,status:'open',url:'https://checkout.stripe.com/c/pay/test'};
+    assert.deepEqual(params.metadata,params.payment_intent_data.metadata);
+    assert.equal(params.line_items[0].price_data.unit_amount,1500);
+    return created;
+   },
+   retrieve:async id=>{assert.equal(created.id,id);return created;}
+  };
+  const server=createServer({auth:createAuthHandler({config,pool,provider:{}}),social:createSocialHandler({config,pool,payments})});
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   const base=`http://127.0.0.1:${server.address().port}`;
   async function request(account,path,method='GET',data,headers={}){
@@ -89,6 +103,37 @@ export async function socialHttpChecks(t,pool){
    assert.ok(ticketList.my_hold_until);
    assert.equal((await request(waitingBuyer,holdPath,'DELETE')).status,200);
    assert.equal((await request(buyers[heldBy],holdPath,'PUT')).status,200);
+   const checkoutPath=ticketPath+'/checkout';
+   const buyer=buyers[heldBy];
+   assert.equal((await request(waitingBuyer,checkoutPath,'POST')).status,409);
+   assert.equal((await request(buyer,checkoutPath,'POST')).status,200);
+   assert.equal((await request(buyer,checkoutPath,'POST')).status,200);
+   assert.equal((await request(waitingBuyer,holdPath,'PUT')).status,409);
+   async function notify(type,object,valid=true){
+    const payload=JSON.stringify({type,livemode:false,data:{object}});
+    const signature=Stripe.webhooks.generateTestHeaderString({payload,secret:valid?secret:'whsec_wrong'});
+    return (await fetch(base+'/api/v1/ticket-webhook',{method:'POST',headers:{'stripe-signature':signature},body:payload})).status;
+   }
+   const payment=()=>({...created,mode:'payment',payment_status:'paid',amount_total:1500,currency:'usd',payment_intent:'pi_'+created.id});
+   const charge=()=>({...payment(),amount:1500,amount_refunded:1500});
+   const state=async()=>(await request(buyer,'events')).data.events.find(row=>row.id===paid.data.id).ticket_state;
+   assert.equal(await notify('checkout.session.completed',payment(),false),400);
+   assert.equal(await state(),'open');
+   for(let i=0;i<2;i++)assert.equal(await notify('checkout.session.completed',payment()),200);
+   assert.equal(await state(),'issued');
+   assert.equal(await notify('charge.refunded',{...charge(),amount_refunded:500}),200);
+   assert.equal(await state(),'issued');
+   assert.equal(await notify('charge.refunded',charge()),200);
+   assert.equal(await notify('checkout.session.completed',payment()),200);
+   assert.equal(await state(),'refunded');
+   assert.equal((await request(waitingBuyer,holdPath,'PUT')).status,200);
+   assert.equal((await request(waitingBuyer,checkoutPath,'POST')).status,200);
+   assert.equal(await notify('charge.refunded',charge()),200);
+   assert.equal(await notify('checkout.session.completed',payment()),200);
+   assert.equal((await request(buyer,holdPath,'PUT')).status,200);
+   assert.equal((await request(buyer,checkoutPath,'POST')).status,200);
+   assert.equal(await notify('checkout.session.expired',created),200);
+   assert.equal((await request(waitingBuyer,holdPath,'PUT')).status,200);
    assert.equal((await request(bob,'events/publishing','PUT',{manualReview:true})).status,403);
    await pool.query('INSERT INTO publishing_admins(user_id) VALUES($1)',[alice.userId]);
    assert.equal((await request(alice,'events/publishing','PUT',{manualReview:true})).status,200);

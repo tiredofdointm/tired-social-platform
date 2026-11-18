@@ -403,3 +403,6 @@ The production domain and tagged endpoint both returned status ok on tired-socia
 
 ## Ticket inventory in development
 Migration 007 and Shared Events support optional USD test ticket prices and one ten-minute hold per account and event. The HTTP suite covers concurrent requests for the last ticket, retry, cancellation, expiry, and the free RSVP boundary. Next: complete sandbox checkout, signed webhook fulfillment and refund reconciliation before production rollout.
+
+## Sandbox ticket checkout
+Migration 008 and the ticket checkout endpoint convert a hold to one pending order. Signed Stripe notifications issue the ticket, release expired sessions, and reconcile partial or full refunds. A full refund restores capacity even when it arrives before the completion notification. The paid order is the ticket record. Checkout is available when both STRIPE_TEST_SECRET_KEY and STRIPE_TEST_WEBHOOK_SECRET are configured. Use Secret Manager for both. Configure the sandbox webhook at /api/v1/ticket-webhook for checkout.session.completed, checkout.session.expired and charge.refunded. Use the same HTTPS origin for sign-in and return from Checkout. Next: verify a real sandbox purchase, refund and expired session on a test deployment before promotion.

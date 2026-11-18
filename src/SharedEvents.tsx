@@ -1,7 +1,7 @@
 import {useEffect,useState} from 'react';
 import type {FormEvent} from 'react';
 
-type Event = {id:string;title:string;venue:string;starts_at:string;capacity:number;attending:number;going:boolean;ticket_price_cents:number|null;held:number;my_hold_until:string|null};
+type Event = {id:string;title:string;venue:string;starts_at:string;capacity:number;attending:number;going:boolean;ticket_price_cents:number|null;held:number;my_hold_until:string|null;ticket_state:string|null};
 type Plan = {id:string;title:string;details:string|null;starts_at:string|null;owner:boolean;accepted:boolean};
 
 type Publishing={manual_review:boolean;admin:boolean;submissions:(Event&{publication:string})[]};
@@ -9,6 +9,7 @@ type Publishing={manual_review:boolean;admin:boolean;submissions:(Event&{publica
 export function SharedEvents(){
  const [publishing,setPublishing]=useState<Publishing|null>(null);
  const [events,setEvents]=useState<Event[]>([]);
+ const [checkoutEnabled,setCheckoutEnabled]=useState(false);
  const [plans,setPlans]=useState<Plan[]>([]);
  const [token,setToken]=useState('');
  const [state,setState]=useState('loading');
@@ -25,7 +26,8 @@ export function SharedEvents(){
   return data;
  }
  async function refresh(){
-  const [eventList,planList,policy]=await Promise.all([api<{events:Event[]}>('events'),api<{plans:Plan[]}>('plans'),api<Publishing>('events/publishing')]);
+  const [eventList,planList,policy]=await Promise.all([api<{events:Event[];checkoutEnabled:boolean}>('events'),api<{plans:Plan[]}>('plans'),api<Publishing>('events/publishing')]);
+  setCheckoutEnabled(eventList.checkoutEnabled);
   setEvents(eventList.events);
   setPlans(planList.plans);
   setPublishing(policy);
@@ -114,10 +116,16 @@ export function SharedEvents(){
    {event.ticket_price_cents!=null ? <>
     <p>Test ticket · ${(event.ticket_price_cents/100).toFixed(2)} · {event.capacity-event.held} available</p>
     {event.my_hold_until && <p>Held until {new Date(event.my_hold_until).toLocaleTimeString()}.</p>}
-    <button aria-describedby={`event-title-${event.id}`} disabled={busy} onClick={()=>void action(
+    {event.ticket_state==='issued' && <p>Your test ticket is confirmed.</p>}
+    {event.ticket_state==='refunded' && <p>Your previous ticket was refunded.</p>}
+    {checkoutEnabled && (event.my_hold_until || event.ticket_state==='open') && <button disabled={busy} onClick={()=>void action(async()=>{
+     const result=await api<{url:string}>('events/'+event.id+'/checkout','POST');
+     window.location.assign(result.url);
+    },'Opening Stripe test checkout…')}>{event.ticket_state==='open'?'Resume test checkout':'Open test checkout'}</button>}
+    {event.ticket_state!=='issued' && event.ticket_state!=='open' && <button aria-describedby={`event-title-${event.id}`} disabled={busy} onClick={()=>void action(
      ()=>api('events/'+event.id+'/ticket-hold',event.my_hold_until?'DELETE':'PUT'),
-     event.my_hold_until?'Hold released.':'Test ticket held. Payment is pending integration.'
-    )}>{event.my_hold_until?'Release hold':'Hold one test ticket'}</button>
+     event.my_hold_until?'Hold released.':'Test ticket held.'
+    )}>{event.my_hold_until?'Release hold':'Hold one test ticket'}</button>}
    </> : <><p>{event.attending} / {event.capacity} attending</p>
    <button aria-describedby={`event-title-${event.id}`} disabled={busy||(!event.going&&event.attending>=event.capacity)} onClick={()=>void action(
     ()=>api('events/'+event.id+'/rsvp',event.going?'DELETE':'PUT'),event.going?'RSVP canceled.':'RSVP saved.'
