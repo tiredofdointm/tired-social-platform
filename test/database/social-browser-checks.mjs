@@ -10,7 +10,7 @@ export async function socialBrowserChecks(t,pool){
   const config={origin:''},repo=authRepository(pool);
   const alice=await repo.signIn({issuer:'browser-test',subject:'alice',name:'Browser Alice'});
   const bob=await repo.signIn({issuer:'browser-test',subject:'bob',name:'Browser Bob'});
-  const server=createServer({auth:createAuthHandler({config,pool,provider:{}}),social:createSocialHandler({config,pool})});
+  const server=createServer({auth:createAuthHandler({config,pool,provider:{}}),social:createSocialHandler({config,pool,payments:{}})});
   await new Promise(r=>server.listen(0,'127.0.0.1',r));config.origin=`http://127.0.0.1:${server.address().port}`;
   let browser;
   try{
