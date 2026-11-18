@@ -360,3 +360,18 @@ and light-mode accent contrast.
 
 Next: confirm CI on the final PR #3 revision, then stage and smoke-test this
 UI-only update before promotion. No database migration is required.
+
+## Preview accessibility rollout checkpoint
+PR #3 merged at 3e65b488acb6a023fd871fe24b3385f274a30634. The merge tree
+matches reviewed head 7f673d227332ea3a6b5ead081575fb0a4a11e92f.
+Platform, Chromium, PostgreSQL, and progress CI passed on that head.
+Production /api/health still reports tired-social-platform-00015-wqd.
+The new staging build and candidate have not been verified. The Cloud Console
+was inaccessible from this browser, and the connected automation balance was
+insufficient for the deployment. No Google Cloud mutations were made this session.
+
+Next: use the authenticated Cloud Shell to resolve the merged commit's staging
+image digest or build the exact merge commit if the image is missing. Deploy a
+tagged 0%-traffic candidate to the existing europe-west1 service. Verify its
+revision, Google auth configuration and preview assets before shifting traffic.
+Verify tired.events after the shift and retain 00015-wqd for rollback.

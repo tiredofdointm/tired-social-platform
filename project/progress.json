@@ -5,7 +5,7 @@
   "currentSession": {
     "primaryTask": "U02",
     "nextTask": "U02",
-    "reason": "Stage the preview workspace accessibility update after final Chromium verification."
+    "reason": "Stage the merged preview accessibility image at zero production traffic, smoke-test the tagged revision, then promote it."
   },
   "workInProgressLimit": 1,
   "tasks": [
@@ -125,7 +125,9 @@
         "https://tired.events/api/health",
         "https://github.com/tiredofdointm/tired-social-platform/pull/3",
         "https://github.com/tiredofdointm/tired-social-platform/actions/runs/44226766018",
-        "https://github.com/tiredofdointm/tired-social-platform/actions/runs/44226765928"
+        "https://github.com/tiredofdointm/tired-social-platform/actions/runs/44226765928",
+        "https://github.com/tiredofdointm/tired-social-platform/actions/runs/44227346541",
+        "https://github.com/tiredofdointm/tired-social-platform/commit/3e65b488acb6a023fd871fe24b3385f274a30634"
       ],
       "workstream": "U"
     },
