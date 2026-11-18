@@ -343,3 +343,14 @@ older release, and the second-account production test remains open.
 Next: continue U02 by inspecting Discover, Feed, Plans, Studio, and Settings at
 narrow and desktop widths. Check keyboard navigation, focus and contrast, and
 address findings before changing the U02 status.
+
+## Preview workspace accessibility
+Discover moves keyboard focus to the event results and exposes selected filters.
+Feed controls expose the active feed mode and like state. Preview dialogs offer
+a named close button and restore focus when dismissed. Studio has a labeled
+keyboard-scrollable event table with row and column headings. Settings and
+Studio drop the unused search field. Narrow layouts wrap long user content,
+and accent text in light mode has separate contrast-tested colors.
+
+Next: review the Chromium screenshots for Discover, Feed, Plans, Studio, and
+Settings, and verify platform and progress CI before staging this UI-only change.

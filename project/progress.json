@@ -5,7 +5,7 @@
   "currentSession": {
     "primaryTask": "U02",
     "nextTask": "U02",
-    "reason": "Continue the desktop and narrow-screen accessibility review of Discover, Feed, Plans, Studio, and Settings. The mobile navigation update is verified in production."
+    "reason": "Verify the preview workspace accessibility fixes in Chromium at narrow and desktop widths before staging."
   },
   "workInProgressLimit": 1,
   "tasks": [
