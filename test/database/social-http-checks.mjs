@@ -23,7 +23,11 @@ export async function socialHttpChecks(t,pool){
    },
    retrieve:async id=>{assert.equal(created.id,id);return created;}
   };
-  const server=createServer({auth:createAuthHandler({config,pool,provider:{}}),social:createSocialHandler({config,pool,payments})});
+  let sandboxEnabled=true;
+  const sandbox=createSocialHandler({config,pool,payments});
+  const publicEvents=createSocialHandler({config,pool,payments:null});
+  const server=createServer({auth:createAuthHandler({config,pool,provider:{}}),
+   social:(...args)=>(sandboxEnabled?sandbox:publicEvents)(...args)});
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   const base=`http://127.0.0.1:${server.address().port}`;
   async function request(account,path,method='GET',data,headers={}){
@@ -106,6 +110,15 @@ export async function socialHttpChecks(t,pool){
    assert.equal((await request(buyers[heldBy],holdPath,'PUT')).status,200);
    const checkoutPath=ticketPath+'/checkout';
    const buyer=buyers[heldBy];
+   sandboxEnabled=false;
+   const publicList=(await request(buyer,'events')).data;
+   assert.equal(publicList.checkoutEnabled,false);
+   assert.ok(!publicList.events.some(row=>row.id===paid.data.id));
+   assert.ok(publicList.events.some(row=>row.id===event.data.id));
+   assert.equal((await request(alice,'events','POST',ticketEvent)).status,503);
+   assert.equal((await request(buyer,holdPath,'PUT')).status,503);
+   assert.equal((await request(buyer,checkoutPath,'POST')).status,503);
+   sandboxEnabled=true;
    assert.equal((await request(waitingBuyer,checkoutPath,'POST')).status,409);
    assert.equal((await request(buyer,checkoutPath,'POST')).status,200);
    assert.equal((await request(buyer,checkoutPath,'POST')).status,200);
