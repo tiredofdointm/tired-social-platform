@@ -458,3 +458,9 @@ Next: exercise the refund and check that Stripe returned $107.50 to the buyer an
 The provider completed the full $107.50 sandbox refund on 00042-cot and Stripe returned a $100.00 transfer reversal. The payout panel now reports the five latest payouts for the signed-in provider's sandbox connected account. It compares the USD amount of an automatic bank payout with the net Stripe entries once Stripe completes reconciliation. It identifies manual, pending, mismatched, and incomplete results.
 
 Next: stage the panel and verify an actual paid automatic sandbox payout. The earlier booking was fully reversed, so a separate sandbox booking or existing eligible balance is needed for the payout check. Do not mark this as bank receipt verification.
+
+## Marketplace build rollout verified
+
+Cloud Shell confirmed 100% production traffic on `tired-social-platform-00044-pov` and a healthy response from that revision on `https://tired.events`. The candidate passed the Google callback and disabled sandbox webhook checks before promotion. Rollback revision: `tired-social-platform-00037-nix`. Sandbox test traffic uses the `ticket-test` tag on `00043-fub`.
+
+M02 remains open for automatic payout reconciliation. Stripe last reported USD 100.00 pending, USD 0.00 available, and no payouts on the connected sandbox account. Payouts are enabled on a daily schedule with a two-day settlement delay. Live payments remain disabled.
