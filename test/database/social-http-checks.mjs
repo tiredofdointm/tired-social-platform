@@ -34,7 +34,28 @@ export async function socialHttpChecks(t,pool){
   let connectAccounts=0;
   let bookingCheckoutSession,bookingSessions=0;
   let payoutsEnabled=true;
+  let bookingRefundArguments=[];
+  let bookingStripeRefunded=0;
+  let bookingTransferReversed=0;
+  let bookingTransferDestination='acct_providerFixture';
   const connect={
+   refunds:{create:async (params,options)=>{
+    bookingRefundArguments.push({params,options});
+    return {status:'succeeded'};
+   }},
+   paymentIntents:{retrieve:async (id,options)=>{
+    assert.equal(id,'pi_booking_fixture');
+    assert.deepEqual(options,{expand:['latest_charge']});
+    return {livemode:false,status:'succeeded',currency:'usd',amount_received:13444,
+     metadata:bookingCheckoutSession.metadata,
+     latest_charge:{id:'ch_booking_fixture',livemode:false,paid:true,amount:13444,
+      amount_refunded:bookingStripeRefunded,transfer:'tr_booking_fixture'}};
+   }},
+   transfers:{retrieve:async id=>{
+    assert.equal(id,'tr_booking_fixture');
+    return {livemode:false,currency:'usd',source_transaction:'ch_booking_fixture',
+     destination:bookingTransferDestination,amount:12506,amount_reversed:bookingTransferReversed};
+   }},
    accounts:{
     create:async (input,options)=>{
      assert.equal(input.capabilities.transfers.requested,true);
@@ -332,10 +353,32 @@ export async function socialHttpChecks(t,pool){
    assert.equal(await notify('checkout.session.completed',bookingPaid),200);
    assert.equal(await notify('checkout.session.completed',bookingPaid),200);
    assert.equal(await bookingState(),'paid');
+   const bookingTransfer=booking+'/transfer';
+   const bookingRefund=booking+'/refund';
+   assert.equal((await request(buyerAccount,bookingTransfer)).status,404);
+   assert.equal((await request(buyerAccount,bookingRefund,'POST')).status,404);
+   assert.equal((await request(bob,bookingRefund,'POST',undefined,{'x-csrf-token':''})).status,403);
+   assert.deepEqual((await request(bob,bookingTransfer)).data,
+    {currency:'usd',chargedCents:13444,refundedCents:0,transferredCents:12506,reversedCents:0});
+   bookingTransferDestination='acct_other';
+   assert.equal((await request(bob,bookingTransfer)).data.error.code,'booking_transfer_mismatch');
+   bookingTransferDestination='acct_providerFixture';
+   for(let i=0;i<2;i++)assert.equal((await request(bob,bookingRefund,'POST')).data.status,'succeeded');
+   assert.deepEqual(bookingRefundArguments,Array(2).fill({
+    params:{payment_intent:'pi_booking_fixture',reverse_transfer:true},
+    options:{idempotencyKey:'booking-full-refund-'+attempts[bookingWinner].data.request_id}
+   }));
+
    assert.equal(await notify('charge.refunded',{...bookingPaid,amount:13444,amount_refunded:938}),200);
    assert.equal((await request(buyerAccount,booking+'/cancel','POST')).status,409);
    assert.equal(await notify('charge.refunded',{...bookingPaid,amount:13444,amount_refunded:13444}),200);
    assert.equal(await bookingState(),'refunded');
+   bookingStripeRefunded=13444;
+   bookingTransferReversed=12506;
+   assert.equal((await request(bob,bookingRefund,'POST')).data.status,'refunded');
+   assert.deepEqual((await request(bob,bookingTransfer)).data,
+    {currency:'usd',chargedCents:13444,refundedCents:13444,transferredCents:12506,reversedCents:12506});
+
    assert.equal((await request(bob,'services/'+submitted.data.id,'DELETE')).status,409);
    assert.equal((await request(customers[bookingWinner],booking+'/cancel','POST')).status,200);
    const recycled=await request(customers[1-bookingWinner],reserve,'POST');
