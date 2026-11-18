@@ -375,3 +375,15 @@ image digest or build the exact merge commit if the image is missing. Deploy a
 tagged 0%-traffic candidate to the existing europe-west1 service. Verify its
 revision, Google auth configuration and preview assets before shifting traffic.
 Verify tired.events after the shift and retain 00015-wqd for rollback.
+
+## Preview accessibility rollout verified
+The user completed the Cloud Shell rollout. Public GET /api/health on tired.events
+returns status ok and revision tired-social-platform-a11y-3e65b48. The homepage
+and new accessibility assets loaded. Google mode returned 200, sign-in redirected
+to Google with the tired.events callback, and the signed-out account API returned
+401. No database migration was needed. Revision 00015-wqd is the prior release.
+U02 is complete for the reviewed accessibility scope.
+
+Next: M01. Extend the existing service directory with provider availability and
+booking requests. Verify provider and customer permissions and concurrent booking
+conflicts. Use the existing Google identity and publishing implementation.

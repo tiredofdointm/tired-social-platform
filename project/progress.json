@@ -3,9 +3,9 @@
   "updated": "2026-11-17",
   "objective": "Independent Google Cloud social/events/talent platform; no Laravel; customizable UI and verified production journeys.",
   "currentSession": {
-    "primaryTask": "U02",
-    "nextTask": "U02",
-    "reason": "Stage the merged preview accessibility image at zero production traffic, smoke-test the tagged revision, then promote it."
+    "primaryTask": null,
+    "nextTask": "M01",
+    "reason": "Continue the talent marketplace with provider availability, booking requests, and conflict checks."
   },
   "workInProgressLimit": 1,
   "tasks": [
@@ -109,7 +109,7 @@
     {
       "id": "U02",
       "title": "Inspect desktop/mobile screenshots and accessibility",
-      "status": "verification",
+      "status": "done",
       "priority": 1,
       "dependsOn": [
         "U01"
@@ -301,7 +301,7 @@
     {
       "id": "M01",
       "title": "Provider profiles, services and booking availability",
-      "status": "backlog",
+      "status": "ready",
       "priority": 1,
       "dependsOn": [
         "E02"
