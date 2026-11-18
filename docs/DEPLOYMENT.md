@@ -24,3 +24,9 @@ Build the exact reviewed commit and deploy its immutable Artifact Registry diges
 4. If public checks fail after routing settles, restore traffic to the captured previous revision and run the same smoke checks against it. Record the deployed or restored revision and any unresolved test in [SESSION.md](SESSION.md).
 
 Use `/api/health` for Cloud Run HTTP checks. The public smoke workflow checks the health response, homepage protections, bundle, Google sign-in configuration, signed-out shared API access, and disabled sandbox webhook. Authenticated business journeys, backup restoration, and bank payout reconciliation require separate verification. Use Secret Manager and the Cloud Run service identity for credentials.
+
+## Database recovery verification
+
+The database CI job uses PostgreSQL 16 to dump the populated integration database and restore it into a separate disposable database. It compares fingerprints of every public table, reruns the data and visibility checks, and validates the migration ledger against the restored copy. CI disposes of the temporary dump when the job exits.
+
+For a Cloud SQL recovery drill, record the backup or point-in-time recovery target and restore into an isolated instance. Keep public Cloud Run traffic and the production connection string in place during verification. On the isolated copy, confirm the migration ledger, application reads and writes, and recovery time. Record the backup timestamp and whether the restored data meets the recovery target before considering any cutover. The CI logical restore and the managed Cloud SQL recovery drill have separate acceptance criteria.
