@@ -52,6 +52,14 @@ try {
  await page.waitForFunction(()=>document.body.dataset.theme==='light');
  await page.getByLabel('Require approval for new event listings').check();
  await page.getByRole('button',{name:'Save changes',exact:true}).click();
+ await page.getByRole('button',{name:'Reset appearance',exact:true}).click();
+ await page.waitForFunction(()=>document.body.dataset.theme==='dark');
+ assert.equal(await page.getByLabel('Theme',{exact:true}).inputValue(),'dark');
+ await page.reload();
+ assert.equal(await page.getByLabel('Display name',{exact:true}).inputValue(),'Returning user');
+ assert.equal(await page.getByLabel('Require approval for new event listings').isChecked(),true);
+ await page.getByLabel('Theme',{exact:true}).selectOption('light');
+ await page.getByRole('button',{name:'Save changes',exact:true}).click();
  await page.getByRole('button',{name:'Organizer studio',exact:true}).click();
  await page.getByRole('button',{name:'+ Create event',exact:true}).click();
  await page.getByLabel('Event name',{exact:true}).fill('Test event');
