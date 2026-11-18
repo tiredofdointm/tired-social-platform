@@ -4,8 +4,8 @@
   "objective": "Independent Google Cloud social/events/talent platform; no Laravel; customizable UI and verified production journeys.",
   "currentSession": {
     "primaryTask": null,
-    "nextTask": "T02",
-    "reason": "Implement event-owner guest lists and single-use ticket check-in in the sandbox."
+    "nextTask": "M02",
+    "reason": "Design and verify Stripe Connect provider onboarding, fee disclosure, and payout reconciliation in the sandbox."
   },
   "workInProgressLimit": 1,
   "tasks": [
@@ -294,13 +294,18 @@
     {
       "id": "T02",
       "title": "Organizer ticket operations",
-      "status": "ready",
+      "status": "done",
       "priority": 1,
       "dependsOn": [
         "T01"
       ],
       "acceptance": "Guest list, duplicate-scan prevention, refunds and real sales metrics pass end-to-end tests.",
-      "evidence": [],
+      "evidence": [
+        "https://github.com/tiredofdointm/tired-social-platform/pull/7",
+        "https://github.com/tiredofdointm/tired-social-platform/actions/runs/44279629659",
+        "https://console.cloud.google.com/run/jobs/executions/details/europe-west1/tired-social-migrate-jvt7j?project=1081107677856",
+        "https://tired.events/api/health"
+      ],
       "workstream": "T"
     },
     {
@@ -323,7 +328,7 @@
     {
       "id": "M02",
       "title": "Connect onboarding, platform fees and payouts",
-      "status": "backlog",
+      "status": "ready",
       "priority": 1,
       "dependsOn": [
         "M01"
