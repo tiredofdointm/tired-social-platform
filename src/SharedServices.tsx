@@ -129,7 +129,7 @@ export function SharedServices({preview, onPreviewMode}:{
   </section>;
   if (view.kind === 'signed-out') return <section className="panel">
     <h1>Find talent</h1><p>Sign in to browse providers and list your services.</p>
-    <a className="primary" href="/auth/google">Sign in with Google</a>
+    <a className="primary" href="/auth/google?next=talent">Sign in with Google</a>
   </section>;
   if (view.kind !== 'ready') return null;
 
