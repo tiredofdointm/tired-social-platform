@@ -395,3 +395,5 @@ provider confirms or either participant cancels. Both participants can view
 upcoming requests in Find talent. Publishing and booking use authenticated
 server identities. Next: verify the database concurrency suite and browser CI,
 apply migration 006 with the release job, then stage and verify before promotion.
+
+PR #4 merged at 84b6e686e2a90decc8c99966a7296234da9c2e9c. PostgreSQL concurrent requests, participant permissions, two-browser approval and cancellation, migration replay, and platform CI passed. Next: execute scripts/release-provider-bookings.sh in authenticated Cloud Shell and verify the production result.
