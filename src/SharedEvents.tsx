@@ -1,4 +1,5 @@
-import {rememberEventForSignIn} from './sharedEventLink';
+import {downloadEventCalendar} from './eventCalendar';
+import {rememberEventForSignIn,sharedEventUrl} from './sharedEventLink';
 import {useEffect,useRef,useState} from 'react';
 import type {FormEvent} from 'react';
 
@@ -56,7 +57,7 @@ export function SharedEvents({linkedId}:{linkedId:string|null}){
   if(state==='ready')linkedHeading.current?.focus();
  },[state]);
  async function shareEvent(id:string){
-  const url=new URL('/#shared-events/'+id,location.origin).href;
+  const url=sharedEventUrl(id).href;
   try{await navigator.clipboard.writeText(url);setMessage('Event link copied.');}
   catch{setMessage('Copy this event link manually: '+url);}
  }
@@ -153,7 +154,9 @@ export function SharedEvents({linkedId}:{linkedId:string|null}){
    <button aria-describedby={`event-title-${event.id}`} disabled={busy||(!event.going&&event.attending>=event.capacity)} onClick={()=>void action(
     ()=>api('events/'+event.id+'/rsvp',event.going?'DELETE':'PUT'),event.going?'RSVP canceled.':'RSVP saved.'
    )}>{event.going?'Cancel RSVP':event.attending>=event.capacity?'Event full':'RSVP'}</button></>}
-   {event.upcoming&&<button type="button" className="ghost" aria-describedby={`event-title-${event.id}`} onClick={()=>void shareEvent(event.id)}>Copy event link</button>}
+   {event.upcoming&&<div className="actions"><button type="button" className="ghost" aria-describedby={`event-title-${event.id}`} onClick={()=>void shareEvent(event.id)}>Copy event link</button>
+    <button type="button" className="ghost" aria-describedby={"event-title-"+event.id} onClick={()=>downloadEventCalendar(event,sharedEventUrl(event.id))}>Add to calendar</button>
+   </div>}
   </article>)}</div>
   {!events.length&&<p>No upcoming events.</p>}
   <h2>Private friend plans</h2>

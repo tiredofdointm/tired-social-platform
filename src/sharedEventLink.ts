@@ -1,6 +1,10 @@
 const eventHash = /^#shared-events\/([0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})$/i;
 const signInKey = 'tired-shared-event-after-sign-in';
 
+export function sharedEventUrl(id: string) {
+ return new URL('/#shared-events/'+id,location.origin);
+}
+
 export function linkedEventId(hash: string) {
  return eventHash.exec(hash)?.[1].toLowerCase() ?? null;
 }
