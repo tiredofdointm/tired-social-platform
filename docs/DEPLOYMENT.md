@@ -1,37 +1,26 @@
 # Google Cloud deployment
-No cloud deployment has been verified. These are instructions, not evidence of execution.
-Use a dedicated new project; do not deploy over existing services.
 
-## Local / Cloud Shell
-Node 22 or later:
-```sh
-npm install
-npm run check
-npm test
-npm start
-```
-npm test builds dist/ before testing. For a build without tests, run npm run build before npm start.
-Open port 8080. The HTTP runtime has no third-party server dependencies; React is bundled into the client.
-The multi-stage Docker build installs build tools separately from the runtime. Playwright is development-only.
-Browser checks: `npx playwright install --with-deps chromium && npm run test:browser`.
+Tired Events runs in project `tired-social-platform`, region `europe-west1`. The Cloud Run service of the same name serves `https://tired.events`. See [SESSION.md](SESSION.md) for verified rollout checkpoints and the previous production revision.
 
-## Cloud Run staging
-After selecting the intended project, billing, region and permissions:
-```sh
-gcloud run deploy tired-social-staging --source . --region us-west1 --no-allow-unauthenticated --min-instances 0 --max-instances 2
-```
-Run from a checkout of the verified commit. The project must be explicitly configured before this command.
-Source deployment may enable/use Cloud Build and Artifact Registry, with associated charges.
-Keep staging authenticated. Use an authorized Cloud Run proxy or account access to verify it.
+| Route | Purpose | Configuration |
+| --- | --- | --- |
+| `tired.events` | Public application | Production Google callback. Sandbox payments disabled. |
+| `public-check` revision tag | Verify a candidate before switching production traffic | Production origin and callback. Sandbox payments disabled. |
+| `ticket-test` revision tag | Signed-in sandbox payment testing | Tag-specific Google callback and sandbox Stripe secrets. |
 
-The Dockerfile binds 0.0.0.0 on PORT (8080 default), runs as non-root, and exposes /healthz.
-cloudbuild.yaml is an optional build-only pipeline: create the intended Artifact Registry repository
-and pass _IMAGE for the desired revision. It does not deploy or configure IAM.
+The Cloud Run service uses public ingress for the homepage and sign-in. Application sessions protect user data. Tagged revisions currently share the same PostgreSQL database, so use backward-compatible migrations and keep sandbox transactions disabled in the public configuration.
 
-## Production prerequisites
-OAuth/session validation, persistent database, uploads, server authorization, rate limits,
-Stripe Connect/test-mode validation, webhook signature/idempotency handling, inventory locking,
-refund reconciliation, backup restoration, logs and error monitoring.
-Do not accept real payments or treat local demo data as production records.
-Pin a revision image for production; verify rollback before domain cutover.
-Never put credentials in source. Use service identity and Secret Manager.
+## Build and verify
+
+Use Node 22 or later. Run `npm ci`, `npm run check`, and `npm test`. The test command builds the client into `dist/`. For browser checks run `npx playwright install --with-deps chromium` and `npm run test:browser`. The Docker image binds to `PORT` as a non-root user.
+
+Build the exact reviewed commit and deploy its immutable Artifact Registry digest. The optional `cloudbuild.yaml` builds and pushes an image without deploying Cloud Run. Apply pending migrations using `tired-social-migrate` and wait for it to succeed before routing a candidate.
+
+## Release and rollback
+
+1. Capture the current production revision. Deploy the candidate under `public-check` at zero production traffic with `PUBLIC_ORIGIN=https://tired.events`. Disable the Stripe sandbox flags and remove sandbox secret references from the candidate.
+2. Check the tagged candidate's `/api/health`, Google OAuth redirect configuration, and disabled sandbox webhook. Compare the revision and image digest with the intended build.
+3. Assign production traffic to the explicit candidate revision. Run the **Production smoke checks** GitHub Actions workflow with the candidate revision, or run `EXPECTED_CLOUD_RUN_REVISION=tired-social-platform-REVISION node scripts/check-production.mjs` from an external network.
+4. If public checks fail after routing settles, restore traffic to the captured previous revision and run the same smoke checks against it. Record the deployed or restored revision and any unresolved test in [SESSION.md](SESSION.md).
+
+Use `/api/health` for Cloud Run HTTP checks. The public smoke workflow checks the health response, homepage protections, bundle, Google sign-in configuration, signed-out shared API access, and disabled sandbox webhook. Authenticated business journeys, backup restoration, and bank payout reconciliation require separate verification. Use Secret Manager and the Cloud Run service identity for credentials.
