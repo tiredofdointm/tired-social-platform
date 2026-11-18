@@ -40,6 +40,16 @@ try {
  await page.getByLabel('Theme',{exact:true}).selectOption('light');
  await page.getByRole('button',{name:'Save changes',exact:true}).click();
  assert.equal(await page.locator('body').getAttribute('data-theme'),'light');
+ await page.emulateMedia({colorScheme:'dark'});
+ assert.equal(await page.locator('body').getAttribute('data-theme'),'light');
+ await page.getByLabel('Theme',{exact:true}).selectOption('system');
+ await page.getByRole('button',{name:'Save changes',exact:true}).click();
+ await page.waitForFunction(()=>document.body.dataset.theme==='dark');
+ await page.emulateMedia({colorScheme:'light'});
+ await page.waitForFunction(()=>document.body.dataset.theme==='light');
+ await page.reload();
+ assert.equal(await page.getByLabel('Theme',{exact:true}).inputValue(),'system');
+ await page.waitForFunction(()=>document.body.dataset.theme==='light');
  await page.getByLabel('Require approval for new event listings').check();
  await page.getByRole('button',{name:'Save changes',exact:true}).click();
  await page.getByRole('button',{name:'Organizer studio',exact:true}).click();
