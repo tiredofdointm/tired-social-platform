@@ -1,3 +1,4 @@
+import {reconcileBookingPayment} from './booking-payments.mjs';
 import Stripe from 'stripe';
 import {transaction} from './database.mjs';
 
@@ -43,6 +44,7 @@ export async function ticketWebhook({req,pool,payments,fail}){
  let event;
  try{event=payments.verify(Buffer.concat(chunks),req.headers['stripe-signature']);}catch{fail(400,'invalid_signature');}
  if(event.livemode!==false)fail(400,'test_event_required');
+ if(event.data.object.metadata?.tired_booking){await reconcileBookingPayment({event,pool,fail});return;}
  const release=['checkout.session.expired','checkout.session.async_payment_failed'].includes(event.type);
  const paid=['checkout.session.completed','checkout.session.async_payment_succeeded'].includes(event.type);
  const refund=event.type==='charge.refunded';

@@ -51,7 +51,7 @@ export function createSocialHandler({config,pool,payments=testPayments(),connect
     return true;
    }
    if(/^\/api\/v1\/services(\/|$)/.test(path)){
-    await services({pool,actor,path,method,req,send,fail,readJson,fields,text,uuid,bookingFeeBps});
+    await services({pool,actor,path,method,req,send,fail,readJson,fields,text,uuid,bookingFeeBps,connect,origin:config.origin});
     return true;
    }
    let match;
