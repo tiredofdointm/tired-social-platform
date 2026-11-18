@@ -166,7 +166,7 @@ export function SharedEvents(){
 
 
 type GuestList = {
- guests:{display_name:string;handle:string;checked_in_at:string|null}[];
+ guests:{display_name:string;handle:string;order_id:string;refundable:boolean;checked_in_at:string|null}[];
  totals:{issued:number;checked_in:number;net_cents:string};
 };
 
@@ -204,8 +204,16 @@ function OrganizerTickets({eventId,api}:{eventId:string;api:<T>(path:string,meth
   <p role="status">{message}</p>
   {list && <>
    <p>{list.totals.checked_in} of {list.totals.issued} guests checked in · ${(Number(list.totals.net_cents)/100).toFixed(2)} net test sales</p>
-   {list.guests.length?<ul>{list.guests.map(guest=><li key={guest.handle}>
+   {list.guests.length?<ul>{list.guests.map(guest=><li key={guest.order_id}>
     {guest.display_name} (@{guest.handle}) · {guest.checked_in_at?'Checked in':'Awaiting check-in'}
+    {guest.refundable && <button type="button" disabled={busy} onClick={()=>{
+     if(!window.confirm('Refund the remaining test payment for '+guest.display_name+'?'))return;
+     void run(async()=>{
+      const result=await api<{status:string}>(path+'/refund','POST',{orderId:guest.order_id});
+      setMessage(result.status==='refunded'?'Ticket already refunded.':'Refund submitted. Refresh the guest list to check for Stripe confirmation.');
+      await loadGuests();
+     });
+    }}>Refund test ticket</button>}
    </li>)}</ul>:<p>No confirmed guests yet.</p>}
   </>}
  </details>;
