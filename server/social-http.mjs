@@ -1,3 +1,4 @@
+import {sandboxBookingFee} from './bookings.mjs';
 import {testConnect,providerConnect} from './provider-connect.mjs';
 import {testPayments,ticketWebhook} from './ticket-checkout.mjs';
 import {services} from './services.mjs';
@@ -22,7 +23,7 @@ async function readJson(req){
  });
  try{return JSON.parse(Buffer.concat(chunks).toString('utf8'));}catch{fail(400,'invalid_json');}
 }
-export function createSocialHandler({config,pool,payments=testPayments(),connect=testConnect()}){
+export function createSocialHandler({config,pool,payments=testPayments(),connect=testConnect(),bookingFeeBps=sandboxBookingFee(connect)}){
  const sessions=authRepository(pool),repo=socialRepository(pool);
  let windowStart=Date.now(),writes=0;
  return async(req,res,url)=>{
@@ -50,7 +51,7 @@ export function createSocialHandler({config,pool,payments=testPayments(),connect
     return true;
    }
    if(/^\/api\/v1\/services(\/|$)/.test(path)){
-    await services({pool,actor,path,method,req,send,fail,readJson,fields,text,uuid});
+    await services({pool,actor,path,method,req,send,fail,readJson,fields,text,uuid,bookingFeeBps});
     return true;
    }
    let match;
