@@ -325,3 +325,21 @@ account content. RSVP and plan actions reference the corresponding title.
 
 Next: verify the signed-in Chromium checks at 320px and inspect the Events
 screenshot before staging the UI revision. This change has no schema migration.
+
+## Mobile navigation production rollout
+PR #2 merged at eca6abbb16e81b886a15218aa7d090c03e9e4777 after platform,
+PostgreSQL/browser, and progress CI passed for 8efa768bb7299e7864ab6b122a5ce2741f8804cc.
+Staging build f1a154b1-45df-4db0-ac8a-e522c6381bfd built that exact commit.
+Cloud Run revision tired-social-platform-00015-wqd uses image digest
+sha256:68842ec48b010a13901fc38f4033b260cf91eaac98875fca778feb22571cef92.
+The mobile-nav-check tag passed /api/health, Google-mode configuration, homepage,
+and navigation asset checks before promotion. It now serves 100% of production
+traffic. The production custom domain confirmed the revision, mobile assets,
+Google sign-in redirect to the configured callback, and signed-out account denial.
+The previous rollback revision is tired-social-platform-00014-lh6. No schema
+migration was required. Full OAuth completion was previously user-verified on the
+older release, and the second-account production test remains open.
+
+Next: continue U02 by inspecting Discover, Feed, Plans, Studio, and Settings at
+narrow and desktop widths. Check keyboard navigation, focus and contrast, and
+address findings before changing the U02 status.

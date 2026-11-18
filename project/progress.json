@@ -5,7 +5,7 @@
   "currentSession": {
     "primaryTask": "U02",
     "nextTask": "U02",
-    "reason": "Stage the verified mobile navigation and signed-in Community and Events updates, then continue the accessibility review."
+    "reason": "Continue the desktop and narrow-screen accessibility review of Discover, Feed, Plans, Studio, and Settings. The mobile navigation update is verified in production."
   },
   "workInProgressLimit": 1,
   "tasks": [
@@ -119,7 +119,10 @@
         "https://github.com/tiredofdointm/tired-social-platform/actions/runs/44213250297",
         "https://github.com/tiredofdointm/tired-social-platform/actions/runs/44213250421",
         "https://github.com/tiredofdointm/tired-social-platform/actions/runs/44219855857",
-        "https://github.com/tiredofdointm/tired-social-platform/actions/runs/44219877901"
+        "https://github.com/tiredofdointm/tired-social-platform/actions/runs/44219877901",
+        "https://github.com/tiredofdointm/tired-social-platform/pull/2",
+        "https://console.cloud.google.com/cloud-build/builds/f1a154b1-45df-4db0-ac8a-e522c6381bfd?project=tired-social-platform",
+        "https://tired.events/api/health"
       ],
       "workstream": "U"
     },
