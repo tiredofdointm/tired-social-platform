@@ -406,3 +406,11 @@ Migration 007 and Shared Events support optional USD test ticket prices and one 
 
 ## Sandbox ticket checkout
 Migration 008 and the ticket checkout endpoint convert a hold to one pending order. Signed Stripe notifications issue the ticket, release expired sessions, and reconcile partial or full refunds. A full refund restores capacity even when it arrives before the completion notification. The paid order is the ticket record. Checkout is available when both STRIPE_TEST_SECRET_KEY and STRIPE_TEST_WEBHOOK_SECRET are configured. Use Secret Manager for both. Configure the sandbox webhook at /api/v1/ticket-webhook for checkout.session.completed, checkout.session.expired and charge.refunded. Use the same HTTPS origin for sign-in and return from Checkout. Next: verify a real sandbox purchase, refund and expired session on a test deployment before promotion.
+
+## Ticketing rollout verified
+
+Sandbox Checkout purchase and full refund succeeded in the staging journey reported by the user on revision `tired-social-platform-00032-yim`. CI covered duplicate and delayed payment notifications, seat contention, checkout expiry, and refunds. The sandbox webhook also listens for `checkout.session.async_payment_succeeded` and `checkout.session.async_payment_failed`.
+
+Cloud Shell confirmed that `tired-social-platform-00033-raf` serves 100% of traffic and that `https://tired.events/api/health` reports that revision healthy. The candidate used the production Google callback and returned `sandbox_checkout_unavailable` for the ticket webhook before promotion. The public build hides test tickets. Rollback revision: `tired-social-platform-bookings-84b6e68`.
+
+Next: T02. Build event-owner guest lists and single-use check-in in the sandbox, then verify that a refund invalidates a ticket and that simultaneous scans cannot both check it in. Live Stripe setup is pending.
