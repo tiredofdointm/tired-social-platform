@@ -13,6 +13,13 @@ export async function socialHttpChecks(t,pool){
   const secret='whsec_local_fixture';
   const payments=testPayments({STRIPE_TEST_SECRET_KEY:'sk_test_fixture',STRIPE_TEST_WEBHOOK_SECRET:secret});
   let created;
+  const refundRequests=new Map();
+  payments.refunds={create:async (params,{idempotencyKey})=>{
+   const original=refundRequests.get(idempotencyKey);
+   if(original)assert.deepEqual(params,original);
+   refundRequests.set(idempotencyKey,params);
+   return {status:'succeeded'};
+  }};
   payments.sessions={
    create:async params=>{
     created={id:'cs_test_'+params.metadata.tired_ticket_order,metadata:params.metadata,livemode:false,status:'open',url:'https://checkout.stripe.com/c/pay/test'};
@@ -151,12 +158,24 @@ export async function socialHttpChecks(t,pool){
    assert.deepEqual(admitted.totals,{issued:1,checked_in:1,net_cents:'1500'});
    assert.ok(admitted.guests[0].checked_in_at);
    assert.ok(!('id' in admitted.guests[0]));
+   const refundPath=ticketPath+'/refund';
+   const orderId=admitted.guests[0].order_id;
+   assert.notEqual(orderId,ticketCode);
+   assert.equal((await request(alice,checkIn,'POST',{code:orderId})).status,404);
+   assert.equal((await request(bob,refundPath,'POST',{orderId})).status,404);
+   assert.equal((await request(alice,refundPath,'POST',{orderId},{'x-csrf-token':''})).status,403);
+
 
    assert.equal(await notify('charge.refunded',{...charge(),amount_refunded:500}),200);
+   assert.equal(await state(),'issued');
+   assert.equal((await request(alice,refundPath,'POST',{orderId})).data.status,'succeeded');
+   assert.equal((await request(alice,refundPath,'POST',{orderId})).data.status,'succeeded');
+   assert.deepEqual([...refundRequests.values()],[{payment_intent:payment().payment_intent}]);
    assert.equal(await state(),'issued');
    assert.equal(await notify('charge.refunded',charge()),200);
    assert.equal(await notify('checkout.session.completed',payment()),200);
    assert.equal(await state(),'refunded');
+   assert.equal((await request(alice,refundPath,'POST',{orderId})).data.status,'refunded');
    assert.equal((await request(alice,checkIn,'POST',{code:ticketCode})).status,404);
    assert.deepEqual((await request(alice,guestList)).data,{guests:[],totals:{issued:0,checked_in:0,net_cents:'0'}});
 
