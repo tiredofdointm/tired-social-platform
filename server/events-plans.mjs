@@ -44,7 +44,7 @@ export async function eventsPlans({pool,payments,origin,actor,path,method,req,se
   const {rows}=await pool.query(`SELECT e.id,e.title,e.venue,e.starts_at,e.capacity,e.ticket_price_cents,e.owner_id=$1 AS owner,e.starts_at>now() AS upcoming,
    (SELECT count(*)::int FROM ticket_orders o WHERE o.event_id=e.id AND o.state IN ('open','issued')) + (SELECT count(*)::int FROM ticket_holds h WHERE h.event_id=e.id AND h.expires_at>now()) AS held,
    (SELECT state FROM ticket_orders o WHERE o.event_id=e.id AND o.buyer_id=$1 ORDER BY (state IN ('open','issued')) DESC, (state='refunded') DESC LIMIT 1) AS ticket_state,
-   (SELECT id FROM ticket_orders o WHERE o.event_id=e.id AND o.buyer_id=$1 AND o.state='issued') AS my_ticket_code,
+   (SELECT admission_code FROM ticket_orders o WHERE o.event_id=e.id AND o.buyer_id=$1 AND o.state='issued') AS my_ticket_code,
    (SELECT checked_in_at FROM ticket_orders o WHERE o.event_id=e.id AND o.buyer_id=$1 AND o.state='issued') AS my_checked_in_at,
    (SELECT expires_at FROM ticket_holds h WHERE h.event_id=e.id AND h.buyer_id=$1 AND h.expires_at>now()) AS my_hold_until,
    (SELECT count(*)::int FROM rsvps r WHERE r.event_id=e.id) AS attending,
@@ -86,12 +86,12 @@ export async function eventsPlans({pool,payments,origin,actor,path,method,req,se
    :'INSERT INTO friend_plans(owner_id,title,starts_at,details) VALUES($1,$2,$3,$4) RETURNING id',values);
   return send(201,rows[0]);
  }
- const match=/^\/api\/v1\/(events|plans)\/([^/]+)\/(rsvp|ticket-hold|checkout|guest-list|check-in|invite|membership)$/.exec(path);
+ const match=/^\/api\/v1\/(events|plans)\/([^/]+)\/(rsvp|ticket-hold|checkout|guest-list|check-in|refund|invite|membership)$/.exec(path);
  if (!match || !uuid(match[2])) fail(404,'not_found');
  const [,resource,id,action]=match;
- if(resource==='events' && ['checkout','ticket-hold','guest-list','check-in'].includes(action) && !checkoutEnabled)fail(503,'sandbox_checkout_unavailable');
- if(resource==='events' && ((action==='guest-list' && method==='GET')||(action==='check-in' && method==='POST'))){
-  return organizerTickets({pool,id,actor,action,req,send,fail,readJson,fields,uuid});
+ if(resource==='events' && ['checkout','ticket-hold','guest-list','check-in','refund'].includes(action) && !checkoutEnabled)fail(503,'sandbox_checkout_unavailable');
+ if(resource==='events' && ((action==='guest-list' && method==='GET')||(['check-in','refund'].includes(action) && method==='POST'))){
+  return organizerTickets({pool,payments,id,actor,action,req,send,fail,readJson,fields,uuid});
  }
  if(resource==='events' && action==='checkout' && method==='POST'){
   const result=await transaction(pool,async db=>{
