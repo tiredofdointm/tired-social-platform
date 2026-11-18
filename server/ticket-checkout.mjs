@@ -22,11 +22,11 @@ export async function checkout({db,actor,event,origin,payments,fail}){
   const until=Math.min(+new Date(event.starts_at),+new Date(hold.expires_at)+31*60000);
   if(until-Date.now()<31*60000)fail(409,'checkout_closed');
   const metadata={tired_ticket_order:hold.attempt_id};
-  session=await payments.sessions.create({mode:'payment',adaptive_pricing:{enabled:false},payment_method_types:['card'],metadata,
+  session=await payments.sessions.create({mode:'payment',adaptive_pricing:{enabled:false},metadata,
    payment_intent_data:{metadata},expires_at:Math.floor(until/1000),
    success_url:origin+'/#shared-events',cancel_url:origin+'/#shared-events',
    line_items:[{quantity:1,price_data:{currency:'usd',unit_amount:event.ticket_price_cents,product_data:{name:event.title}}}]
-  },{idempotencyKey:'ticket-'+hold.attempt_id});
+  },{idempotencyKey:'ticket-dynamic-'+hold.attempt_id});
   if(session.livemode!==false || session.status!=='open')fail(409,'checkout_unavailable');
   await db.query('INSERT INTO ticket_orders(id,event_id,buyer_id,amount,session_id) VALUES($1,$2,$3,$4,$5)',[hold.attempt_id,event.id,actor,event.ticket_price_cents,session.id]);
   await db.query('DELETE FROM ticket_holds WHERE attempt_id=$1',[hold.attempt_id]);
@@ -43,18 +43,20 @@ export async function ticketWebhook({req,pool,payments,fail}){
  let event;
  try{event=payments.verify(Buffer.concat(chunks),req.headers['stripe-signature']);}catch{fail(400,'invalid_signature');}
  if(event.livemode!==false)fail(400,'test_event_required');
- if(!['checkout.session.completed','checkout.session.expired','charge.refunded'].includes(event.type))return;
+ const release=['checkout.session.expired','checkout.session.async_payment_failed'].includes(event.type);
+ const paid=['checkout.session.completed','checkout.session.async_payment_succeeded'].includes(event.type);
+ const refund=event.type==='charge.refunded';
+ if(!release && !paid && !refund)return;
  const obj=event.data.object;
  const id=obj.metadata?.tired_ticket_order;
  if(!id || !/^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(id))return;
  await transaction(pool,async db=>{
   const order=(await db.query('SELECT * FROM ticket_orders WHERE id=$1 FOR UPDATE',[id])).rows[0];
   if(!order)fail(503,'order_unavailable');
-  if(event.type==='checkout.session.expired'){
+  if(release){
    if(obj.id===order.session_id)await db.query("UPDATE ticket_orders SET state='expired' WHERE id=$1 AND state='open'",[id]);
    return;
   }
-  const refund=event.type==='charge.refunded';
   if(!refund && (obj.id!==order.session_id || obj.payment_status!=='paid' || obj.mode!=='payment'))return;
   if(obj.currency!=='usd' || (refund?obj.amount:obj.amount_total)!==order.amount || typeof obj.payment_intent!=='string' ||
      (order.payment_id && order.payment_id!==obj.payment_intent))fail(409,'payment_mismatch');
