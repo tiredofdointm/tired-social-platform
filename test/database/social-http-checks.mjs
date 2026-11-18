@@ -32,6 +32,8 @@ export async function socialHttpChecks(t,pool){
   };
   let sandboxEnabled=true;
   let connectAccounts=0;
+  let bookingCheckoutSession,bookingSessions=0;
+  let payoutsEnabled=true;
   const connect={
    accounts:{
     create:async (input,options)=>{
@@ -42,9 +44,24 @@ export async function socialHttpChecks(t,pool){
     },
     retrieve:async id=>{
      assert.equal(id,'acct_providerFixture');
-     return {details_submitted:true,capabilities:{transfers:'active'},payouts_enabled:true};
+     return {details_submitted:true,capabilities:{transfers:'active'},payouts_enabled:payoutsEnabled};
     }
    },
+   checkout:{sessions:{
+    create:async (input,options)=>{
+     assert.deepEqual(input.line_items.map(item=>item.price_data.unit_amount),[12506,938]);
+     assert.deepEqual(input.payment_intent_data.transfer_data,{destination:'acct_providerFixture',amount:12506});
+     assert.equal(options.idempotencyKey,'booking-'+input.metadata.tired_booking);
+     bookingSessions++;
+     bookingCheckoutSession={id:'cs_test_'+input.metadata.tired_booking,metadata:input.metadata,
+      status:'open',livemode:false,url:'https://checkout.stripe.com/c/pay/booking'};
+     return bookingCheckoutSession;
+    },
+    retrieve:async id=>{
+     assert.equal(id,bookingCheckoutSession.id);
+     return bookingCheckoutSession;
+    }
+   }},
    accountLinks:{create:async input=>{
     assert.equal(input.account,'acct_providerFixture');
     assert.equal(input.return_url,config.origin+'/#talent');
@@ -295,11 +312,40 @@ export async function socialHttpChecks(t,pool){
    assert.equal((await request(customers[bookingWinner],'services/bookings')).data.bookings[0].quote,null);
    sandboxEnabled=true;
    assert.equal((await request(customers[bookingWinner],'services/bookings')).data.bookings[0].confirmed,true);
+   const buyerAccount=customers[bookingWinner];
+   const bookingCheckout=booking+'/checkout';
+   assert.equal((await request(bob,bookingCheckout,'POST')).status,404);
+   assert.equal((await request(customers[1-bookingWinner],bookingCheckout,'POST')).status,404);
+   payoutsEnabled=false;
+   assert.equal((await request(buyerAccount,bookingCheckout,'POST')).data.error.code,'provider_payouts_pending');
+   payoutsEnabled=true;
+   const opens=await Promise.all([request(buyerAccount,bookingCheckout,'POST'),request(buyerAccount,bookingCheckout,'POST')]);
+   assert.ok(opens.every(open=>open.status===200&&open.data.url==='https://checkout.stripe.com/c/pay/booking'));
+   assert.equal(bookingSessions,1);
+   assert.equal((await request(buyerAccount,booking+'/cancel','POST')).status,409);
+   const bookingPaid={...bookingCheckoutSession,mode:'payment',currency:'usd',amount_total:13444,
+    payment_status:'paid',payment_intent:'pi_booking_fixture'};
+   const bookingState=async()=>(await request(buyerAccount,'services/bookings')).data.bookings[0].payment_state;
+   assert.equal(await notify('checkout.session.completed',{...bookingPaid,amount_total:100}),409);
+   assert.equal(await notify('checkout.session.completed',bookingPaid,false),400);
+   assert.equal(await bookingState(),'open');
+   assert.equal(await notify('checkout.session.completed',bookingPaid),200);
+   assert.equal(await notify('checkout.session.completed',bookingPaid),200);
+   assert.equal(await bookingState(),'paid');
+   assert.equal(await notify('charge.refunded',{...bookingPaid,amount:13444,amount_refunded:938}),200);
+   assert.equal((await request(buyerAccount,booking+'/cancel','POST')).status,409);
+   assert.equal(await notify('charge.refunded',{...bookingPaid,amount:13444,amount_refunded:13444}),200);
+   assert.equal(await bookingState(),'refunded');
    assert.equal((await request(bob,'services/'+submitted.data.id,'DELETE')).status,409);
    assert.equal((await request(customers[bookingWinner],booking+'/cancel','POST')).status,200);
    const recycled=await request(customers[1-bookingWinner],reserve,'POST');
    assert.equal(recycled.status,200);
    assert.equal((await request(bob,'services/bookings')).data.bookings[0].quote,null);
+   const recycledPath='services/bookings/'+recycled.data.request_id;
+   assert.equal((await request(bob,recycledPath+'/confirm','POST',price)).status,200);
+   assert.equal((await request(customers[1-bookingWinner],recycledPath+'/checkout','POST')).status,200);
+   assert.equal(await notify('checkout.session.expired',bookingCheckoutSession),200);
+
    assert.equal((await request(customers[1-bookingWinner],'services/bookings/'+recycled.data.request_id+'/cancel','POST')).status,200);
    assert.equal((await request(bob,'services/slots/'+slot.data.id+'/remove','POST')).status,200);
    const rejected = await request(bob,'services','POST',{...service,title:'Another submission'});
