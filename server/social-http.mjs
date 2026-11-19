@@ -158,6 +158,16 @@ export function createSocialHandler({config,pool,payments=testPayments(),ticketP
     });send(200,{blocked:method==='PUT'});
    }else fail(404,'not_found');
   }catch(error){
+   if(path==='/api/v1/events/connect' && req.method==='POST'){
+    const stripe=typeof error.type==='string' && error.type.startsWith('Stripe');
+    const safe=value=>typeof value==='string' && /^[a-zA-Z0-9_.\[\]-]{1,120}$/.test(value)?value:undefined;
+    // The account creation request contains only platform settings. Strip identifiers
+    // and links from provider messages and keep those messages in private logs.
+    const detail=stripe?String(error.raw?.message??error.message).replace(/https?:\/\/\S+|[\w.+-]+@[\w.-]+|\b[a-zA-Z]+_[a-zA-Z0-9_]{8,}\b/g,'[redacted]').slice(0,700):undefined;
+    console.error(JSON.stringify({event:'organizer_onboarding_failed',requestId,source:stripe?'stripe':'application',
+     type:safe(error.type),code:safe(error.code),parameter:safe(error.param),stripeRequestId:safe(error.requestId),detail,
+     applicationCode:error instanceof ApiError?safe(error.message):undefined}));
+   }
    if(path.endsWith('/checkout') && !(error instanceof ApiError)){
     const stripe=typeof error.type==='string' && error.type.startsWith('Stripe');
     const safe=value=>typeof value==='string' && /^[a-zA-Z0-9_.\[\]-]{1,100}$/.test(value)?value:undefined;
