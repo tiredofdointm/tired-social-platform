@@ -104,7 +104,7 @@ export function authRepository(pool) {
   },
   async session(sessionToken) {
    if(!validToken(sessionToken)) return null;
-   const result=await pool.query(`SELECT u.id,p.handle,p.display_name,p.bio,p.visibility FROM sessions s
+   const result=await pool.query(`SELECT u.id,p.handle,p.display_name,p.bio,p.visibility,p.share_event_attendance FROM sessions s
     JOIN users u ON u.id=s.user_id JOIN profiles p ON p.user_id=u.id
     WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at>now() AND u.status='active'`,[digest(sessionToken)]);
    return result.rows[0]??null;

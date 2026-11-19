@@ -3,7 +3,7 @@ import {rememberEventForSignIn,sharedEventUrl} from './sharedEventLink';
 import {useEffect,useRef,useState} from 'react';
 import type {FormEvent} from 'react';
 
-type Event = {id:string;title:string;venue:string;starts_at:string;capacity:number;attending:number;going:boolean;ticket_price_cents:number|null;held:number;my_hold_until:string|null;ticket_state:string|null;owner:boolean;upcoming:boolean;my_ticket_code:string|null;my_checked_in_at:string|null};
+type Event = {id:string;title:string;venue:string;starts_at:string;capacity:number;attending:number;attending_friends?:string[];going:boolean;ticket_price_cents:number|null;held:number;my_hold_until:string|null;ticket_state:string|null;owner:boolean;upcoming:boolean;my_ticket_code:string|null;my_checked_in_at:string|null};
 type Plan = {id:string;title:string;details:string|null;starts_at:string|null;owner:boolean;accepted:boolean};
 
 type Publishing={manual_review:boolean;admin:boolean;submissions:(Event&{publication:string})[]};
@@ -126,6 +126,7 @@ export function SharedEvents({linkedId}:{linkedId:string|null}){
   {linkedId&&!events.some(event=>event.id===linkedId)&&<p role="status">This event is unavailable. Browse upcoming events below.</p>}
   <div className="stack">{events.map(event=><article className="panel" key={event.id}>
    <h3 id={`event-title-${event.id}`} ref={event.id===linkedId?linkedHeading:undefined} tabIndex={event.id===linkedId?-1:undefined}>{event.title}</h3><p>{event.venue} · {new Date(event.starts_at).toLocaleString()}</p>
+   {event.attending_friends&&event.attending_friends.length>0&&<p>Friends going: {event.attending_friends.slice(0,20).map(handle=>'@'+handle).join(', ')}{event.attending_friends.length>20?' and more':''}</p>}
    {event.ticket_price_cents!=null ? <>
     <p>Test ticket · ${(event.ticket_price_cents/100).toFixed(2)} · {event.capacity-event.held} available</p>
     {event.my_hold_until && <p>Held until {new Date(event.my_hold_until).toLocaleTimeString()}.</p>}

@@ -49,6 +49,16 @@ export async function eventsPlans({pool,payments,origin,actor,path,method,req,se
    (SELECT checked_in_at FROM ticket_orders o WHERE o.event_id=e.id AND o.buyer_id=$1 AND o.state='issued') AS my_checked_in_at,
    (SELECT expires_at FROM ticket_holds h WHERE h.event_id=e.id AND h.buyer_id=$1 AND h.expires_at>now()) AS my_hold_until,
    (SELECT count(*)::int FROM rsvps r WHERE r.event_id=e.id) AS attending,
+   ARRAY(
+    SELECT pr.handle FROM follows outgoing
+    JOIN follows incoming ON incoming.follower_id=outgoing.followed_id AND incoming.followed_id=outgoing.follower_id
+    JOIN profiles pr ON pr.user_id=outgoing.followed_id AND pr.share_event_attendance
+    WHERE outgoing.follower_id=$1 AND outgoing.status='accepted' AND incoming.status='accepted'
+     AND ${visibleOwner('pr.user_id')}
+     AND (EXISTS(SELECT 1 FROM rsvps r WHERE r.event_id=e.id AND r.user_id=pr.user_id)
+       OR EXISTS(SELECT 1 FROM ticket_orders t WHERE t.event_id=e.id AND t.buyer_id=pr.user_id AND t.state='issued'))
+    ORDER BY pr.handle LIMIT 21
+   ) AS attending_friends,
    EXISTS(SELECT 1 FROM rsvps r WHERE r.event_id=e.id AND r.user_id=$1) AS going
    FROM events e WHERE (e.starts_at>now() OR (e.ticket_price_cents IS NOT NULL AND e.starts_at>now()-interval '24 hours'
    AND (e.owner_id=$1 OR EXISTS (SELECT 1 FROM ticket_orders o WHERE o.event_id=e.id AND o.buyer_id=$1 AND o.state='issued'))))

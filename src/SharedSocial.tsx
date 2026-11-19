@@ -1,6 +1,6 @@
 import {useEffect,useState} from 'react';
 import type {FormEvent} from 'react';
-type Profile={id:string;handle:string;display_name:string;bio:string|null;visibility:string;follow_status?:string|null};
+type Profile={id:string;handle:string;display_name:string;bio:string|null;visibility:string;share_event_attendance?:boolean;follow_status?:string|null};
 type Post={id:string;author_id:string;body:string;visibility:string;display_name:string;handle:string;created_at:string;likes:number;liked:boolean;follow_status:string|null};
 const feedModes=[['for-you','For you'],['latest','Latest posts'],['following','Following accounts']] as const;
 type Comment={id:string;body:string;display_name:string};
@@ -36,11 +36,12 @@ export function SharedSocial(){
  if(phase==='error'||!me)return <section className="panel"><p role="alert">{error||'Account connection unavailable.'}</p><button onClick={()=>void load()}>Retry community connection</button></section>;
  return <section className="shared-community"><header className="page-heading"><h1>Your community</h1><p>Signed in as @{me.handle}. Posts here are saved to your account.</p></header>
  {error&&<p className="note" role="alert">{error}</p>}{notice&&<p role="status">{notice}</p>}
- <details className="panel"><summary>Edit shared profile</summary><form onSubmit={e=>{e.preventDefault();void action(async()=>{await api('me/profile','PATCH',{handle:me.handle,display_name:me.display_name,bio:me.bio??'',visibility:me.visibility});window.dispatchEvent(new Event('tired-profile-change'));setNotice('Profile saved.');});}}>
+ <details className="panel"><summary>Edit shared profile</summary><form onSubmit={e=>{e.preventDefault();void action(async()=>{await api('me/profile','PATCH',{handle:me.handle,display_name:me.display_name,bio:me.bio??'',visibility:me.visibility,shareEventAttendance:me.share_event_attendance??false});window.dispatchEvent(new Event('tired-profile-change'));setNotice('Profile saved.');});}}>
  <label>Account name<input required maxLength={80} value={me.display_name} onChange={e=>setMe({...me,display_name:e.target.value})}/></label>
  <label>Handle<input required pattern="[a-z0-9_]{3,30}" value={me.handle} onChange={e=>setMe({...me,handle:e.target.value})}/></label>
  <label>Account bio<textarea aria-label="Account bio" maxLength={500} value={me.bio??''} onChange={e=>setMe({...me,bio:e.target.value})}/></label>
  <label>Follow requests<select aria-label="Follow requests" value={me.visibility} onChange={e=>setMe({...me,visibility:e.target.value})}><option value="public">Accept automatically</option><option value="private">Require my approval</option></select></label>
+ <label className="attendance-sharing"><input type="checkbox" checked={me.share_event_attendance??false} onChange={e=>setMe({...me,share_event_attendance:e.target.checked})}/> Show my event attendance to people I follow who follow me back</label>
  <p className="small muted">Post visibility is chosen separately. Public posts remain visible even when follows require approval.</p><button disabled={busy}>Save shared profile</button></form></details>
  {requests.length>0&&<section className="panel"><h2>Follow requests</h2>{requests.map(person=><div className="shared-person" key={person.id}><span>@{person.handle}</span><button disabled={busy} onClick={()=>void action(async()=>{await api(`follows/${person.id}/accept`,'PUT');await refresh();})}>Accept {person.display_name}</button><button disabled={busy} onClick={()=>void action(async()=>{await api(`follows/${person.id}/accept`,'DELETE');await refresh();})}>Decline {person.display_name}</button><button disabled={busy} onClick={()=>void action(async()=>{await api(`blocks/${person.id}`,'PUT');await refresh();})}>Block {person.display_name}</button></div>)}</section>}
  {blockedAccounts.length>0&&<details className="panel"><summary>Blocked accounts</summary>{blockedAccounts.map(person=><div className="shared-person" key={person.id}><span>@{person.handle}</span><button disabled={busy} onClick={()=>void action(async()=>{await api(`blocks/${person.id}`,'DELETE');await refresh();})}>Unblock {person.display_name}</button></div>)}</details>}

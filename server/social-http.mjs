@@ -70,11 +70,12 @@ export function createSocialHandler({config,pool,payments=testPayments(),connect
     const posts=rows.map(({feed_position,...post})=>post);
     send(200,{posts,nextCursor:posts.length===limit?Buffer.from(JSON.stringify({createdAt:last.feed_position,id:last.id,mode})).toString('base64url'):null});
    }else if(path==='/api/v1/me/profile' && method==='PATCH'){
-    const body=await readJson(req);fields(body,['handle','display_name','bio','visibility']);
+    const body=await readJson(req);fields(body,['handle','display_name','bio','visibility','shareEventAttendance']);
+    if(body.shareEventAttendance!==undefined&&typeof body.shareEventAttendance!=='boolean')fail(400,'invalid_attendance_preference');
     if(typeof body.handle!=='string'||!/^[a-z0-9_]{3,30}$/.test(body.handle))fail(400,'invalid_handle');
     if(typeof body.bio!=='string'||body.bio.includes('\0')||Array.from(body.bio).length>500)fail(400,'invalid_bio');
     const name=text(body.display_name,80),v=visibility(body.visibility,['public','private']);
-    const result=await pool.query('UPDATE profiles SET handle=$2,display_name=$3,bio=$4,visibility=$5 WHERE user_id=$1 RETURNING handle,display_name,bio,visibility',[actor,body.handle,name,body.bio,v]);send(200,{profile:result.rows[0]});
+    const result=await pool.query('UPDATE profiles SET handle=$2,display_name=$3,bio=$4,visibility=$5,share_event_attendance=coalesce($6,share_event_attendance) WHERE user_id=$1 RETURNING handle,display_name,bio,visibility,share_event_attendance',[actor,body.handle,name,body.bio,v,body.shareEventAttendance??null]);send(200,{profile:result.rows[0]});
    }else if((match=/^\/api\/v1\/profiles\/([a-z0-9_]{3,30})$/.exec(path)) && method==='GET'){
     const result=await pool.query(`SELECT u.id,p.handle,p.display_name,p.visibility,
      CASE WHEN u.id=$1 OR p.visibility='public' OR f.status='accepted' THEN p.bio ELSE NULL END AS bio,
