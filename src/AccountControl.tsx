@@ -1,7 +1,8 @@
 import {rememberEventForSignIn} from './sharedEventLink';
+import type {ReactNode} from 'react';
 import {useEffect,useState} from 'react';
 type Account={user:{display_name:string},csrfToken:string};
-export function AccountControl({page}:{page:string}){
+export function AccountControl({page,children}:{page:string;children?:ReactNode}){
  const [mode,setMode]=useState('loading'),[account,setAccount]=useState<Account|null>(null),[busy,setBusy]=useState(false);
  async function load(){
   try {
@@ -28,5 +29,5 @@ export function AccountControl({page}:{page:string}){
  if(mode==='preview'||mode==='loading')return null;
  if(mode==='error')return <button onClick={()=>void load()}>Retry account connection</button>;
  if(!account)return <a className="primary" href={'/auth/google?next='+encodeURIComponent(page)} onClick={rememberEventForSignIn}>Sign in with Google</a>;
- return <div className="account-control"><span>Signed in: {account.user.display_name}</span><button disabled={busy} onClick={()=>void logout()}>{busy?'Signing out…':'Sign out'}</button></div>;
+ return <><div className="account-control"><span>Signed in: {account.user.display_name}</span><button disabled={busy} onClick={()=>void logout()}>{busy?'Signing out…':'Sign out'}</button></div>{children}</>;
 }

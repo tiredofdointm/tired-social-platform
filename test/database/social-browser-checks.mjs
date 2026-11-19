@@ -43,6 +43,25 @@ export async function socialBrowserChecks(t,pool){
    await a.goto(config.origin);await b.goto(config.origin+'/#community');
    await a.getByRole('heading',{name:'Your community',exact:true}).waitFor();
    await b.getByRole('heading',{name:'Your community',exact:true}).waitFor();
+   const beforeCreate=a.viewportSize();
+   await a.setViewportSize({width:390,height:844});
+   const createButton=a.getByRole('button',{name:'+ Create',exact:true});
+   await createButton.click();
+   await a.keyboard.press('Escape');
+   assert.equal(await createButton.evaluate(el=>el===document.activeElement),true);
+   for(const [action,label,kind] of [
+    ['Private friend plan','Title','plans'],['Community event','Title','events'],
+    ['Service listing','Service title',null],['Community post','Shared post',null]
+   ]){
+    await createButton.click();
+    await a.getByRole('dialog',{name:'Create',exact:true}).getByRole('button',{name:action,exact:true}).click();
+    const input=a.getByLabel(label,{exact:true});
+    await input.waitFor();
+    await a.waitForFunction(el=>el===document.activeElement,await input.elementHandle());
+    if(kind)await a.waitForFunction(kind=>document.querySelector('select[aria-label="Type"]')?.value===kind,kind);
+    assert.ok(await a.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+   }
+   if(beforeCreate)await a.setViewportSize(beforeCreate);
    if(!await a.getByLabel('Account bio',{exact:true}).isVisible())await a.getByText('Edit shared profile',{exact:true}).click();
    await a.getByLabel('Handle',{exact:true}).fill('browser_alice');
    await a.getByLabel('Account bio',{exact:true}).fill('Persisted shared profile');
@@ -228,7 +247,9 @@ export async function socialBrowserChecks(t,pool){
    const service=b.getByRole('heading',{name:serviceTitle,exact:true});
    await service.waitFor();
    assert.match(await b.locator('.demo-banner').innerText(),/SHARED WORKSPACE/);
-   assert.equal(await b.getByRole('button',{name:'+ Create',exact:true}).count(),0);
+   await b.getByRole('button',{name:'+ Create',exact:true}).click();
+   await b.getByRole('dialog',{name:'Create',exact:true}).getByRole('button',{name:'Service listing',exact:true}).waitFor();
+   await b.keyboard.press('Escape');
    assert.equal(await b.getByRole('searchbox').count(),1);
    for(const width of [320,390,768,1440]){
     await b.setViewportSize({width,height:850});
@@ -269,6 +290,7 @@ export async function socialBrowserChecks(t,pool){
    await b.getByRole('button',{name:'Sign out',exact:true}).click();
    await b.getByRole('heading',{name:'Join your community',exact:true}).waitFor();
    assert.equal(await b.getByText('Persistent browser community post <b>literal</b>',{exact:true}).count(),0);
+   assert.equal(await b.getByRole('button',{name:'+ Create',exact:true}).count(),0);
    assert.deepEqual(errors,[]);
   }catch(error){
    if(browser){await mkdir('artifacts',{recursive:true});let i=0;for(const context of browser.contexts())for(const page of context.pages()){

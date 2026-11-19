@@ -1,4 +1,5 @@
-import {createContext,useContext,useEffect, useState} from 'react';
+import type {CreateRequest} from './SharedCreate';
+import {createContext,useContext,useEffect,useRef,useState} from 'react';
 import type {FormEvent, ReactNode} from 'react';
 
 const LiveBookings=createContext(false);
@@ -29,11 +30,20 @@ async function get<T>(resource:string, signal:AbortSignal):Promise<T> {
   return response.json();
 }
 
-export function SharedServices({preview, onPreviewMode}:{
+export function SharedServices({preview,onPreviewMode,create}:{
+  create:CreateRequest;
   preview:ReactNode;
   onPreviewMode:(preview:boolean)=>void;
 }) {
   const [view, setView] = useState<View>({kind:'loading'});
+  const serviceTitle=useRef<HTMLInputElement>(null);
+  useEffect(()=>{
+    if(view.kind!=='ready'||create.target!=='service')return;
+    const details=serviceTitle.current?.closest('details');
+    if(details)details.open=true;
+    serviceTitle.current?.focus();
+    create.handled();
+  },[view.kind,create.target,create.handled]);
   const [refresh, setRefresh] = useState(0);
   const [category, setCategory] = useState('All categories');
   const [query, setQuery] = useState('');
@@ -147,7 +157,7 @@ export function SharedServices({preview, onPreviewMode}:{
     <details className="panel">
       <summary>List your service</summary>
       <form onSubmit={event => void submit(event)}>
-        <label>Service title<input name="title" required maxLength={120}/></label>
+        <label>Service title<input ref={serviceTitle} name="title" required maxLength={120}/></label>
         <label>Category<select name="category" required>{categories.map(item => <option key={item}>{item}</option>)}</select></label>
         <label>Description<textarea name="description" required maxLength={1000}/></label>
         <button className="primary" disabled={busy}>{publishing.manual_review ? 'Submit for review' : 'Publish service'}</button>

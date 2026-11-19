@@ -423,7 +423,8 @@
       ],
       "acceptance": "Organizers complete live onboarding and receive the face value. Buyers see the 7.5% fee before checkout. Verify ticket issuance, refunds and transfer reconciliation on the correct merchant.",
       "evidence": [
-        "docs/SESSION.md#production-launch-verification"
+        "docs/SESSION.md#production-launch-verification",
+        "https://github.com/tiredofdointm/tired-social-platform/pull/30"
       ],
       "workstream": "T"
     }
