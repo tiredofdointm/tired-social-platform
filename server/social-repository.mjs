@@ -18,15 +18,19 @@ export function socialRepository(db) {
     async listFeed(viewerId, { limit = 20, before = null, mode = 'latest' } = {}) {
       if (!Number.isInteger(limit) || limit < 1 || limit > 100) throw new Error('Invalid page size');
       if (before && (typeof before.createdAt !== 'string' || typeof before.id !== 'string')) throw new Error('Invalid cursor');
+      // A fixed boost lets newer community posts move ahead of older followed posts.
+      const position = mode === 'for-you'
+        ? "p.created_at + CASE WHEN f.status='accepted' THEN interval '24 hours' ELSE interval '0' END"
+        : 'p.created_at';
       const result = await db.query(`SELECT p.id,p.author_id,p.body,p.visibility,p.created_at::text,
-        pr.handle,pr.display_name,
+        pr.handle,pr.display_name, f.status AS follow_status, (${position})::text AS feed_position,
         (SELECT count(*)::int FROM reactions r WHERE r.post_id=p.id) AS likes,
-        EXISTS(SELECT 1 FROM reactions r WHERE r.post_id=p.id AND r.user_id=$1) AS liked,
-        (SELECT f.status FROM follows f WHERE f.follower_id=$1 AND f.followed_id=p.author_id) AS follow_status
+        EXISTS(SELECT 1 FROM reactions r WHERE r.post_id=p.id AND r.user_id=$1) AS liked
         FROM posts p JOIN profiles pr ON pr.user_id=p.author_id
-        WHERE ($5='latest' OR p.author_id=$1 OR EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=$1 AND f.followed_id=p.author_id AND f.status='accepted')) AND can_view_post($1,p.id)
-        AND ($2::timestamptz IS NULL OR (p.created_at,p.id)<($2::timestamptz,$3::uuid))
-        ORDER BY p.created_at DESC,p.id DESC LIMIT $4`, [viewerId, before?.createdAt ?? null, before?.id ?? null, limit, mode]);
+        LEFT JOIN follows f ON f.follower_id=$1 AND f.followed_id=p.author_id
+        WHERE ($5<>'following' OR p.author_id=$1 OR f.status='accepted') AND can_view_post($1,p.id)
+        AND ($2::timestamptz IS NULL OR (${position},p.id)<($2::timestamptz,$3::uuid))
+        ORDER BY ${position} DESC,p.id DESC LIMIT $4`, [viewerId, before?.createdAt ?? null, before?.id ?? null, limit, mode]);
       // Keep PostgreSQL's microsecond timestamp text intact for stable cursor paging.
       return result.rows;
     },

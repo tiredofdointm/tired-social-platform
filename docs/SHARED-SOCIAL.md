@@ -14,7 +14,7 @@ blocked on the deployment/access and identity setup gates.
 - Account lookup by handle. Private bios require an accepted follow; name and handle
   remain discoverable unless either account has blocked the other.
 - Persistent posts with public, accepted-followers or only-me visibility.
-- Latest and Following feeds with stable cursor pagination (20 default, 50 maximum).
+- The For you feed gives posts from accepted follows a 24-hour recency boost. Latest and Following sort by posting time. All three enforce the same visibility rules and use a timestamp and post ID for pagination (20 posts by default, 50 maximum).
 - Owner-only post edits/deletion at the API; UI supports creation/deletion.
 - Idempotent likes, persistent comments and the most recent 50 visible comments.
 - Public follows, private follow requests, accept/decline, unfollow and block/unblock.
@@ -35,7 +35,7 @@ Responses have no-store caching, a request ID and non-sensitive error messages.
 |---|---|
 | /api/v1/me/profile | PATCH full allowed profile fields |
 | /api/v1/profiles/:handle | GET public/minimal profile |
-| /api/v1/feed?mode=latest or following&cursor=...&limit=... | GET |
+| /api/v1/feed?mode=latest, following or for-you&cursor=...&limit=... | GET |
 | /api/v1/posts | POST body and visibility |
 | /api/v1/posts/:id | GET, PATCH body/visibility, DELETE |
 | /api/v1/posts/:id/comments | GET latest 50, POST body |
