@@ -6,25 +6,9 @@ Do not maintain conflicting task states in this document.
 publishes a summary and downloadable report after progress/doc changes or manual dispatch.
 It validates dependencies, task states, evidence fields, retry gates and a one-task work-in-progress limit.
 
-## Current map
-- Complete: independent source/runtime; automated platform checks; local UI milestone;
-  master plan/backend contract; PostgreSQL social schema and database tests.
-- Complete: dependency-aware progress tracking workflow (verified in GitHub Actions).
-- Complete: React/TypeScript migration with preserved browser-local journeys.
-- Complete: server data-access layer and migration runner; PostgreSQL 16 CI passed.
-- Cloud Run staging (C02): blocked on authenticated endpoint verification. GitHub connected and build succeeded; console reports healthy service, but reported /healthz URL returns 404. Resolve URL/configuration discrepancy before marking complete.
-- Complete: server Google identity and sessions (A01), verified in unit/database/browser/container checks.
-- Complete: shared social implementation (S01), including PostgreSQL-backed two-browser journeys.
-- Next application task: shared events and private friend plans (E01).
-- Blocked: live identity activation (A02), pending cloud database, OAuth configuration and verified host access.
-- Ready: rendered UI/accessibility review.
-- Complete: cloud project identity, active billing linkage, and required API verification (C01).
-- Pending: verified staging service and subsequent domain connection.
-- Not activated live: identity and shared social APIs. Not implemented: production events/plans,
-  ticket sales, provider payouts and launch.
+## Current status
 
-This is milestone tracking, not a claim that a percentage of the full product is done.
-Local demo functionality and tested schema are not a deployed multiuser platform.
+See [the task ledger](../project/progress.json) for dependencies and task status, and [the launch verification record](SESSION.md#production-launch-verification) for the deployment, recovery and outstanding checks.
 
 ## Anti-loop rules
 1. Read SESSION.md and progress.json before touching code.
