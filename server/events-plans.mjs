@@ -44,6 +44,7 @@ export async function eventsPlans({pool,payments,origin,actor,path,method,req,se
  if (path === '/api/v1/events' && method === 'GET') {
   if(linkedEvent!=null&&!uuid(linkedEvent))fail(400,'invalid_event_id');
   const {rows}=await pool.query(`SELECT e.id,e.title,e.venue,e.starts_at,e.capacity,e.ticket_price_cents,e.owner_id=$1 AS owner,e.starts_at>now() AS upcoming,
+   EXISTS(SELECT 1 FROM event_check_in_staff s WHERE s.event_id=e.id AND s.user_id=$1) AS check_in_staff,
    (SELECT count(*)::int FROM ticket_orders o WHERE o.event_id=e.id AND o.state IN ('open','issued')) + (SELECT count(*)::int FROM ticket_holds h WHERE h.event_id=e.id AND h.expires_at>now()) AS held,
    (SELECT state FROM ticket_orders o WHERE o.event_id=e.id AND o.buyer_id=$1 ORDER BY (state IN ('open','issued')) DESC, (state='refunded') DESC LIMIT 1) AS ticket_state,
    (SELECT admission_code FROM ticket_orders o WHERE o.event_id=e.id AND o.buyer_id=$1 AND o.state='issued') AS my_ticket_code,
@@ -62,7 +63,7 @@ export async function eventsPlans({pool,payments,origin,actor,path,method,req,se
    ) AS attending_friends,
    EXISTS(SELECT 1 FROM rsvps r WHERE r.event_id=e.id AND r.user_id=$1) AS going
    FROM events e WHERE (e.starts_at>now() OR (e.ticket_price_cents IS NOT NULL AND e.starts_at>now()-interval '24 hours'
-   AND (e.owner_id=$1 OR EXISTS (SELECT 1 FROM ticket_orders o WHERE o.event_id=e.id AND o.buyer_id=$1 AND o.state='issued'))))
+   AND (e.owner_id=$1 OR EXISTS (SELECT 1 FROM event_check_in_staff s WHERE s.event_id=e.id AND s.user_id=$1) OR EXISTS (SELECT 1 FROM ticket_orders o WHERE o.event_id=e.id AND o.buyer_id=$1 AND o.state='issued'))))
    AND e.publication='published' AND (($2 AND e.live_ticket=$4) OR e.ticket_price_cents IS NULL) AND ${visibleOwner('e.owner_id')}
    ORDER BY CASE WHEN e.id=$3::uuid THEN 0 ELSE 1 END,e.starts_at,e.id LIMIT 100`,[actor,checkoutEnabled,linkedEvent??null,live]);
   return send(200,{events:rows.map(event=>({...event,ticketQuote:event.ticket_price_cents==null?null:ticketQuote(event.ticket_price_cents,live)})),checkoutEnabled,liveTickets:live});
@@ -102,11 +103,11 @@ export async function eventsPlans({pool,payments,origin,actor,path,method,req,se
    :'INSERT INTO friend_plans(owner_id,title,starts_at,details) VALUES($1,$2,$3,$4) RETURNING id',values);
   return send(201,rows[0]);
  }
- const match=/^\/api\/v1\/(events|plans)\/([^/]+)\/(rsvp|ticket-hold|checkout|guest-list|check-in|refund|invite|membership)$/.exec(path);
+ const match=/^\/api\/v1\/(events|plans)\/([^/]+)\/(rsvp|ticket-hold|checkout|guest-list|check-in|staff|refund|invite|membership)$/.exec(path);
  if (!match || !uuid(match[2])) fail(404,'not_found');
  const [,resource,id,action]=match;
- if(resource==='events' && ['checkout','ticket-hold','guest-list','check-in','refund'].includes(action) && !checkoutEnabled)fail(503,'sandbox_checkout_unavailable');
- if(resource==='events' && ((action==='guest-list' && method==='GET')||(['check-in','refund'].includes(action) && method==='POST'))){
+ if(resource==='events' && ['checkout','ticket-hold','guest-list','check-in','staff','refund'].includes(action) && !checkoutEnabled)fail(503,'sandbox_checkout_unavailable');
+ if(resource==='events' && ((action==='staff'&&['GET','PUT','DELETE'].includes(method))||(action==='guest-list' && method==='GET')||(['check-in','refund'].includes(action) && method==='POST'))){
   return organizerTickets({pool,payments,id,actor,action,req,send,fail,readJson,fields,uuid});
  }
  if(resource==='events' && action==='checkout' && method==='POST'){
