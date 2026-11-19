@@ -4,6 +4,7 @@ set -euo pipefail
 
 project=tired-social-platform
 region=europe-west1
+sandbox_runtime="tired-social-runtime@$project.iam.gserviceaccount.com"
 origin=https://ticket-test---tired-social-platform-y3dmxghtqa-ew.a.run.app
 commit=603046b5372adab7959d3b987e2209176e3dd344
 registry="$region-docker.pkg.dev/$project/cloud-run-source-deploy/$project/$project"
@@ -36,5 +37,5 @@ stripe "${args[@]}" "https://api.stripe.com/v1/webhook_endpoints/$id" |
   jq -e '.livemode==false and (.enabled_events | index("checkout.session.async_payment_failed")!=null and index("checkout.session.async_payment_succeeded")!=null)' >/dev/null
 unset key
 
-gcloud run deploy "$project" --project="$project" --region="$region" --image="$image"   --update-env-vars="PUBLIC_ORIGIN=$origin" --tag=ticket-test --no-traffic --remove-env-vars=STRIPE_LIVE_PLATFORM_ACCOUNT --remove-secrets=STRIPE_LIVE_BOOKING_KEY,STRIPE_LIVE_BOOKING_WEBHOOK --quiet
+gcloud run deploy "$project" --project="$project" --region="$region" --image="$image"   --update-env-vars="PUBLIC_ORIGIN=$origin" --tag=ticket-test --service-account="$sandbox_runtime" --no-traffic --remove-env-vars=STRIPE_LIVE_PLATFORM_ACCOUNT --remove-secrets=STRIPE_LIVE_BOOKING_KEY,STRIPE_LIVE_BOOKING_WEBHOOK --quiet
 curl -fsS "$origin/api/health" | jq -e 'select(.status=="ok")'
