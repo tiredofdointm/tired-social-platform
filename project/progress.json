@@ -297,7 +297,9 @@
         "https://github.com/tiredofdointm/tired-social-platform/pull/7",
         "https://github.com/tiredofdointm/tired-social-platform/actions/runs/44279629659",
         "https://console.cloud.google.com/run/jobs/executions/details/europe-west1/tired-social-migrate-jvt7j?project=1081107677856",
-        "https://tired.events/api/health"
+        "https://tired.events/api/health",
+        "https://github.com/tiredofdointm/tired-social-platform/pull/32",
+        "docs/SESSION.md#current-deployed-state"
       ],
       "workstream": "T"
     },
@@ -349,14 +351,15 @@
         "https://github.com/tiredofdointm/tired-social-platform/pull/25",
         "https://github.com/tiredofdointm/tired-social-platform/pull/26",
         "https://github.com/tiredofdointm/tired-social-platform/pull/27",
-        "https://github.com/tiredofdointm/tired-social-platform/pull/31"
+        "https://github.com/tiredofdointm/tired-social-platform/pull/31",
+        "docs/SESSION.md#current-deployed-state"
       ],
       "workstream": "R"
     },
     {
       "id": "C03",
       "title": "Connect tired.events through Cloudflare",
-      "status": "blocked",
+      "status": "done",
       "priority": 0,
       "dependsOn": [
         "C02"
@@ -364,17 +367,11 @@
       "acceptance": "Verified intended Google origin, hostname certificates and access model; apex/www route to the new app; HTTPS and rollback verified; existing mail/auth/API services preserved.",
       "evidence": [
         "https://agent.tinyfish.ai/runs/94f41e4b-e585-4913-a0b7-afefd58431e4",
-        "docs/SESSION.md#production-launch-verification"
+        "docs/SESSION.md#production-launch-verification",
+        "docs/CLOUDFLARE.md",
+        "docs/SESSION.md#current-deployed-state"
       ],
-      "workstream": "C",
-      "blocker": {
-        "cause": "The apex serves the intended production revision and www redirects correctly. The former DNS rollback IP reset a TLS connection using the production hostname.",
-        "retryCondition": "A working fallback for the required rollback scope is identified and exercised.",
-        "nextAction": "Use the Cloud Run application rollback for a bad release. Validate a separately supported domain fallback before treating restoration of old DNS as viable.",
-        "attempts": [
-          "Verified Google domain mapping, certificate, live apex A records, canonical path and query redirects, and the current production revision. The historical IP failed its direct TLS check."
-        ]
-      }
+      "workstream": "C"
     },
     {
       "id": "A02",
@@ -425,7 +422,8 @@
       "acceptance": "Organizers complete live onboarding and receive the face value. Buyers see the 7.5% fee before checkout. Verify ticket issuance, refunds and transfer reconciliation on the correct merchant.",
       "evidence": [
         "docs/SESSION.md#production-launch-verification",
-        "https://github.com/tiredofdointm/tired-social-platform/pull/30"
+        "https://github.com/tiredofdointm/tired-social-platform/pull/30",
+        "docs/SESSION.md#current-deployed-state"
       ],
       "workstream": "T"
     }
