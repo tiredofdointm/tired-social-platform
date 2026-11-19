@@ -4,7 +4,7 @@ import {rememberEventForSignIn,sharedEventUrl} from './sharedEventLink';
 import {useEffect,useLayoutEffect,useRef,useState} from 'react';
 import type {FormEvent} from 'react';
 
-type Event = {id:string;title:string;venue:string;starts_at:string;capacity:number;attending:number;attending_friends?:string[];going:boolean;ticket_price_cents:number|null;ticketQuote?:{ticketCents:number;feeCents:number;totalCents:number};held:number;my_hold_until:string|null;ticket_state:string|null;owner:boolean;upcoming:boolean;my_ticket_code:string|null;my_checked_in_at:string|null};
+type Event = {id:string;title:string;venue:string;starts_at:string;capacity:number;attending:number;attending_friends?:string[];going:boolean;ticket_price_cents:number|null;ticketQuote?:{ticketCents:number;feeCents:number;totalCents:number};held:number;my_hold_until:string|null;ticket_state:string|null;owner:boolean;check_in_staff:boolean;upcoming:boolean;my_ticket_code:string|null;my_checked_in_at:string|null};
 type Plan = {id:string;title:string;details:string|null;starts_at:string|null;owner:boolean;accepted:boolean};
 
 type Publishing={manual_review:boolean;admin:boolean;submissions:(Event&{publication:string})[]};
@@ -156,7 +156,7 @@ export function SharedEvents({linkedId,create:request}:{linkedId:string|null;cre
     {event.ticket_state==='issued' && <><p>Your {liveTickets?'ticket':'test ticket'} is confirmed.</p>
      {event.my_checked_in_at?<p>Checked in at {new Date(event.my_checked_in_at).toLocaleTimeString()}.</p>:<p>Check-in code <code className="post-text">{event.my_ticket_code}</code></p>}
     </>}
-    {event.owner && <OrganizerTickets eventId={event.id} api={api} live={liveTickets}/>}
+    {(event.owner||event.check_in_staff) && <OrganizerTickets eventId={event.id} api={api} live={liveTickets} owner={event.owner}/>}
     {event.ticket_state==='refunded' && <p>Your previous ticket was refunded.</p>}
     {checkoutEnabled && event.upcoming && (event.my_hold_until || event.ticket_state==='open') && <button disabled={busy} onClick={async()=>{
      setBusy(true);
@@ -209,8 +209,13 @@ type GuestList = {
  totals:{issued:number;checked_in:number;net_cents:string};
 };
 
-function OrganizerTickets({eventId,api,live}:{eventId:string;live:boolean;api:<T>(path:string,method?:string,body?:unknown)=>Promise<T>}){
+function OrganizerTickets({eventId,api,live,owner}:{eventId:string;live:boolean;owner:boolean;api:<T>(path:string,method?:string,body?:unknown)=>Promise<T>}){
  const [list,setList]=useState<GuestList|null>(null);
+ const [staff,setStaff]=useState<{user_id:string;handle:string}[]|null>(null);
+ async function loadStaff(){
+  const response=await api<{staff:{user_id:string;handle:string}[]}>(path+'/staff');
+  setStaff(response.staff);
+ }
  const [message,setMessage]=useState('');
  const [busy,setBusy]=useState(false);
  const path='events/'+eventId;
@@ -224,8 +229,24 @@ function OrganizerTickets({eventId,api,live}:{eventId:string;live:boolean;api:<T
   setList(await api<GuestList>(path+'/guest-list'));
  }
  return <details className="panel">
-  <summary>Guest list and check-in</summary>
-  <button type="button" disabled={busy} onClick={()=>void run(loadGuests)}>{list?'Refresh guest list':'Load guest list'}</button>
+  <summary>{owner?'Guest list and check-in':'Staff check-in'}</summary>
+  {owner&&<details><summary>Manage check-in staff</summary>
+   <p>Staff can check tickets at this event. Only the organizer can view the guest list or issue refunds.</p>
+   <form onSubmit={event=>{
+    event.preventDefault();
+    const form=event.currentTarget;
+    const handle=String(new FormData(form).get('handle')).trim().replace(/^@/,'').toLowerCase();
+    void run(async()=>{await api(path+'/staff','PUT',{handle});form.reset();await loadStaff();setMessage('Staff access granted.');});
+   }}>
+    <label>Staff account handle<input name="handle" required maxLength={31}/></label>
+    <button disabled={busy}>Grant check-in access</button>
+   </form>
+   <button disabled={busy} onClick={()=>void run(loadStaff)}>View assigned staff</button>
+   {staff&&(staff.length?<ul>{staff.map(person=><li key={person.user_id}>@{person.handle} <button disabled={busy}
+    onClick={()=>void run(async()=>{await api(path+'/staff','DELETE',{userId:person.user_id});await loadStaff();setMessage('Staff access removed.');})}
+    aria-label={'Remove check-in access for @'+person.handle}>Remove access</button></li>)}</ul>:<p>No staff assigned.</p>)}
+  </details>}
+  {owner&&<button type="button" disabled={busy} onClick={()=>void run(loadGuests)}>{list?'Refresh guest list':'Load guest list'}</button>}
   <form onSubmit={event=>{
    event.preventDefault();
    const form=event.currentTarget;
@@ -234,7 +255,7 @@ function OrganizerTickets({eventId,api,live}:{eventId:string;live:boolean;api:<T
     await api(path+'/check-in','POST',{code});
     form.reset();
     setMessage('Guest checked in.');
-    await loadGuests();
+    if(owner)await loadGuests();
    });
   }}>
    <label>Guest ticket code<input name="code" required maxLength={36} autoComplete="off"/></label>
