@@ -9,13 +9,13 @@ export function testConnect(env=process.env){
  return new Stripe(env.STRIPE_TEST_SECRET_KEY,{timeout:5000,maxNetworkRetries:0});
 }
 
-export async function providerConnect({pool,connect,actor,method,origin,send,fail,records=sandboxRecords}){
+export async function providerConnect({pool,connect,actor,method,origin,send,fail,records=sandboxRecords,organizer=false}){
  if(!connect)return send(200,{enabled:false});
  if(!['GET','POST'].includes(method))fail(405,'method_not_allowed');
  const result=await transaction(pool,async db=>{
   const provider=await db.query(`SELECT id FROM users WHERE id=$1 AND status='active'
-   AND EXISTS(SELECT 1 FROM service_listings WHERE owner_id=$1 AND publication='published' AND withdrawn_at IS NULL)
-   FOR NO KEY UPDATE`,[actor]);
+   AND ($2::boolean OR EXISTS(SELECT 1 FROM service_listings WHERE owner_id=$1 AND publication='published' AND withdrawn_at IS NULL))
+   FOR NO KEY UPDATE`,[actor,organizer]);
   if(!provider.rowCount)return {enabled:true,eligible:false};
 
   const existing=await db.query(`SELECT stripe_account_id FROM ${records.accounts} WHERE provider_id=$1`,[actor]);
@@ -37,7 +37,7 @@ export async function providerConnect({pool,connect,actor,method,origin,send,fai
   transfersEnabled:account.capabilities?.transfers==='active',payoutsEnabled:account.payouts_enabled===true};
  if(method==='GET')return send(200,status);
 
- const returnUrl=origin+'/#talent';
+ const returnUrl=origin+(organizer?'/#shared-events':'/#talent');
  const link=await connect.accountLinks.create({account:result.accountId,type:'account_onboarding',return_url:returnUrl,refresh_url:returnUrl});
  if(new URL(link.url).origin!=='https://connect.stripe.com')fail(503,'onboarding_unavailable');
  return send(200,{...status,url:link.url});

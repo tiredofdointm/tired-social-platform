@@ -3,8 +3,8 @@ import {transaction} from './database.mjs';
 export async function organizerTickets({pool,payments,id,actor,action,req,send,fail,readJson,fields,uuid}) {
  const result=await transaction(pool,async db=>{
   const event=await db.query(`SELECT id FROM events WHERE id=$1 AND owner_id=$2
-   AND publication='published' AND ticket_price_cents IS NOT NULL
-   AND starts_at>now()-interval '24 hours' FOR SHARE`,[id,actor]);
+   AND live_ticket=$3 AND publication='published' AND ticket_price_cents IS NOT NULL
+   AND starts_at>now()-interval '24 hours' FOR SHARE`,[id,actor,payments.live===true]);
   if(!event.rowCount)fail(404,'not_found');
 
   if(action==='guest-list'){
@@ -27,7 +27,7 @@ export async function organizerTickets({pool,payments,id,actor,action,req,send,f
    if(!order)fail(404,'not_found');
    if(order.state==='refunded')return {status:'refunded'};
    if(order.state!=='issued' || !order.payment_id)fail(409,'ticket_cannot_be_refunded');
-   const refund=await payments.refunds.create({payment_intent:order.payment_id},
+   const refund=await payments.refunds.create({payment_intent:order.payment_id,...(payments.live?{reverse_transfer:true}:{})},
     {idempotencyKey:'ticket-full-refund-'+body.orderId.toLowerCase()});
    if(refund.status==='failed' || refund.status==='canceled')fail(409,'refund_failed_check_stripe');
    return {status:refund.status};

@@ -3,7 +3,7 @@ import {rememberEventForSignIn,sharedEventUrl} from './sharedEventLink';
 import {useEffect,useRef,useState} from 'react';
 import type {FormEvent} from 'react';
 
-type Event = {id:string;title:string;venue:string;starts_at:string;capacity:number;attending:number;attending_friends?:string[];going:boolean;ticket_price_cents:number|null;held:number;my_hold_until:string|null;ticket_state:string|null;owner:boolean;upcoming:boolean;my_ticket_code:string|null;my_checked_in_at:string|null};
+type Event = {id:string;title:string;venue:string;starts_at:string;capacity:number;attending:number;attending_friends?:string[];going:boolean;ticket_price_cents:number|null;ticketQuote?:{ticketCents:number;feeCents:number;totalCents:number};held:number;my_hold_until:string|null;ticket_state:string|null;owner:boolean;upcoming:boolean;my_ticket_code:string|null;my_checked_in_at:string|null};
 type Plan = {id:string;title:string;details:string|null;starts_at:string|null;owner:boolean;accepted:boolean};
 
 type Publishing={manual_review:boolean;admin:boolean;submissions:(Event&{publication:string})[]};
@@ -13,6 +13,8 @@ export function SharedEvents({linkedId}:{linkedId:string|null}){
  const [publishing,setPublishing]=useState<Publishing|null>(null);
  const [events,setEvents]=useState<Event[]>([]);
  const [checkoutEnabled,setCheckoutEnabled]=useState(false);
+ const [liveTickets,setLiveTickets]=useState(false);
+ const [seller,setSeller]=useState<{transfersEnabled?:boolean;payoutsEnabled?:boolean}|null>(null);
  const [plans,setPlans]=useState<Plan[]>([]);
  const [token,setToken]=useState('');
  const [state,setState]=useState('loading');
@@ -30,8 +32,12 @@ export function SharedEvents({linkedId}:{linkedId:string|null}){
   return data;
  }
  async function refresh(){
-  const [eventList,planList,policy]=await Promise.all([api<{events:Event[];checkoutEnabled:boolean}>('events'+(linkedId?'?event='+linkedId:'')),api<{plans:Plan[]}>('plans'),api<Publishing>('events/publishing')]);
+  const [eventList,planList,policy]=await Promise.all([api<{events:Event[];checkoutEnabled:boolean;liveTickets?:boolean}>('events'+(linkedId?'?event='+linkedId:'')),api<{plans:Plan[]}>('plans'),api<Publishing>('events/publishing')]);
   setCheckoutEnabled(eventList.checkoutEnabled);
+  setLiveTickets(eventList.liveTickets===true);
+  if(eventList.liveTickets){
+   try{setSeller(await api('events/connect'));}catch{setSeller(null);}
+  }
   setEvents(eventList.events);
   setPlans(planList.plans);
   setPublishing(policy);
@@ -90,6 +96,13 @@ export function SharedEvents({linkedId}:{linkedId:string|null}){
  return <section className="shared-community">
   <h1>Shared events and plans</h1>
   <p className="post-text" role="status">{message}</p>
+  {liveTickets&&<details className="panel"><summary>Organizer payouts</summary>
+   <p>{seller?.transfersEnabled&&seller.payoutsEnabled?'Your Stripe account can receive ticket sales.':seller?'Connect a payout account to sell tickets. Free events are available now.':'Payout account status is unavailable. Refresh the list to check again.'}</p>
+   <button disabled={busy} onClick={()=>void action(async()=>{
+    const {url}=await api<{url:string}>('events/connect','POST');
+    window.location.assign(url);
+   },'')}>Manage organizer payouts</button>
+  </details>}
   <details className="panel"><summary>Create an event or plan</summary>
    <form onSubmit={create}>
     <label>Type<select aria-label="Type" value={kind} onChange={event=>setKind(event.target.value)}><option value="events">Community event</option><option value="plans">Private friend plan</option></select></label>
@@ -97,7 +110,7 @@ export function SharedEvents({linkedId}:{linkedId:string|null}){
     <label>Start time in your local timezone<input name="startsAt" type="datetime-local" required/></label>
     {kind==='events'?<>
      <label>Venue<input name="venue" required maxLength={160}/></label>
-     {checkoutEnabled && <label>Test ticket price (USD, optional)<input name="price" type="number" step="0.01" min="0.50" max="999999.99"/></label>}
+     {checkoutEnabled && (!liveTickets || (seller?.payoutsEnabled && seller.transfersEnabled)) && <label>{liveTickets?'Ticket price':'Test ticket price'} (USD, optional)<input name="price" type="number" step="0.01" min="0.50" max="999999.99"/></label>}
      <label>Capacity<input name="capacity" required type="number" min={1} max={10000} defaultValue={20}/></label>
     </>:<label>Meetup details<textarea name="details" required maxLength={1000}/></label>}
     <button className="primary" disabled={busy}>{kind==='events'?(publishing?.manual_review?'Submit event for review':'Publish event'):'Create private plan'}</button>
@@ -128,29 +141,29 @@ export function SharedEvents({linkedId}:{linkedId:string|null}){
    <h3 id={`event-title-${event.id}`} ref={event.id===linkedId?linkedHeading:undefined} tabIndex={event.id===linkedId?-1:undefined}>{event.title}</h3><p>{event.venue} · {new Date(event.starts_at).toLocaleString()}</p>
    {event.attending_friends&&event.attending_friends.length>0&&<p>Friends going: {event.attending_friends.slice(0,20).map(handle=>'@'+handle).join(', ')}{event.attending_friends.length>20?' and more':''}</p>}
    {event.ticket_price_cents!=null ? <>
-    <p>Test ticket · ${(event.ticket_price_cents/100).toFixed(2)} · {event.capacity-event.held} available</p>
+    <p>{liveTickets?'Ticket':'Test ticket'} · ${(event.ticket_price_cents/100).toFixed(2)}{liveTickets&&event.ticketQuote&&<> + ${(event.ticketQuote.feeCents/100).toFixed(2)} platform fee (7.5%) · ${(event.ticketQuote.totalCents/100).toFixed(2)} total</>} · {event.capacity-event.held} available</p>
     {event.my_hold_until && <p>Held until {new Date(event.my_hold_until).toLocaleTimeString()}.</p>}
-    {event.ticket_state==='issued' && <><p>Your test ticket is confirmed.</p>
+    {event.ticket_state==='issued' && <><p>Your {liveTickets?'ticket':'test ticket'} is confirmed.</p>
      {event.my_checked_in_at?<p>Checked in at {new Date(event.my_checked_in_at).toLocaleTimeString()}.</p>:<p>Check-in code <code className="post-text">{event.my_ticket_code}</code></p>}
     </>}
-    {event.owner && <OrganizerTickets eventId={event.id} api={api}/>}
+    {event.owner && <OrganizerTickets eventId={event.id} api={api} live={liveTickets}/>}
     {event.ticket_state==='refunded' && <p>Your previous ticket was refunded.</p>}
     {checkoutEnabled && event.upcoming && (event.my_hold_until || event.ticket_state==='open') && <button disabled={busy} onClick={async()=>{
      setBusy(true);
      setCheckoutStatus({id:event.id,text:'Contacting Stripe…'});
      try{
       const {url}=await api<{url:string}>('events/'+event.id+'/checkout','POST');
-      setCheckoutStatus({id:event.id,text:'Test checkout is ready.',url});
+      setCheckoutStatus({id:event.id,text:liveTickets?'Checkout is ready.':'Test checkout is ready.',url});
       window.location.assign(url);
      }catch(error){
       setCheckoutStatus({id:event.id,text:'Checkout could not open: '+(error as Error).message});
      }finally{setBusy(false);}
-    }}>{event.ticket_state==='open'?'Resume test checkout':'Open test checkout'}</button>}
+    }}>{event.ticket_state==='open'?(liveTickets?'Resume checkout':'Resume test checkout'):(liveTickets?'Open checkout':'Open test checkout')}</button>}
     {checkoutStatus?.id===event.id && <p role="status">{checkoutStatus.text}{checkoutStatus.url && <> <a href={checkoutStatus.url} target="_blank" rel="noopener noreferrer">Open Stripe in a new tab</a></>}</p>}
     {event.upcoming && event.ticket_state!=='issued' && event.ticket_state!=='open' && <button aria-describedby={`event-title-${event.id}`} disabled={busy} onClick={()=>void action(
      ()=>api('events/'+event.id+'/ticket-hold',event.my_hold_until?'DELETE':'PUT'),
-     event.my_hold_until?'Hold released.':'Test ticket held.'
-    )}>{event.my_hold_until?'Release hold':'Hold one test ticket'}</button>}
+     event.my_hold_until?'Hold released.':liveTickets?'Ticket held.':'Test ticket held.'
+    )}>{event.my_hold_until?'Release hold':liveTickets?'Hold one ticket':'Hold one test ticket'}</button>}
    </> : <><p>{event.attending} / {event.capacity} attending</p>
    <button aria-describedby={`event-title-${event.id}`} disabled={busy||(!event.going&&event.attending>=event.capacity)} onClick={()=>void action(
     ()=>api('events/'+event.id+'/rsvp',event.going?'DELETE':'PUT'),event.going?'RSVP canceled.':'RSVP saved.'
@@ -186,7 +199,7 @@ type GuestList = {
  totals:{issued:number;checked_in:number;net_cents:string};
 };
 
-function OrganizerTickets({eventId,api}:{eventId:string;api:<T>(path:string,method?:string,body?:unknown)=>Promise<T>}){
+function OrganizerTickets({eventId,api,live}:{eventId:string;live:boolean;api:<T>(path:string,method?:string,body?:unknown)=>Promise<T>}){
  const [list,setList]=useState<GuestList|null>(null);
  const [message,setMessage]=useState('');
  const [busy,setBusy]=useState(false);
@@ -219,17 +232,17 @@ function OrganizerTickets({eventId,api}:{eventId:string;api:<T>(path:string,meth
   </form>
   <p className="post-text" role="status">{message}</p>
   {list && <>
-   <p>{list.totals.checked_in} of {list.totals.issued} guests checked in · ${(Number(list.totals.net_cents)/100).toFixed(2)} net test sales</p>
+   <p>{list.totals.checked_in} of {list.totals.issued} guests checked in · ${(Number(list.totals.net_cents)/100).toFixed(2)} {live?'in buyer payments after refunds':'net test sales'}</p>
    {list.guests.length?<ul>{list.guests.map(guest=><li key={guest.order_id}>
     {guest.display_name} (@{guest.handle}) · {guest.checked_in_at?'Checked in':'Awaiting check-in'}
     {guest.refundable && <button type="button" disabled={busy} onClick={()=>{
-     if(!window.confirm('Refund the remaining test payment for '+guest.display_name+'?'))return;
+     if(!window.confirm((live?'Refund the remaining payment for ':'Refund the remaining test payment for ')+guest.display_name+'?'))return;
      void run(async()=>{
       const result=await api<{status:string}>(path+'/refund','POST',{orderId:guest.order_id});
       setMessage(result.status==='refunded'?'Ticket already refunded.':'Refund submitted. Refresh the guest list to check for Stripe confirmation.');
       await loadGuests();
      });
-    }}>Refund test ticket</button>}
+    }}>{live?'Refund ticket':'Refund test ticket'}</button>}
    </li>)}</ul>:<p>No confirmed guests yet.</p>}
   </>}
  </details>;

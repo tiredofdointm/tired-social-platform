@@ -24,7 +24,7 @@ export async function liveBookingConfig(origin, env = process.env) {
     throw Error('Live booking merchant verification failed');
   }
   return {
-    connect, records: liveRecords, bookingFeeBps: LIVE_BOOKING_FEE_BPS,
+    connect, ticketPayments: {live:true,sessions:connect.checkout.sessions,refunds:connect.refunds,accounts:connect.accounts}, records: liveRecords, bookingFeeBps: LIVE_BOOKING_FEE_BPS,
     verifyLiveBooking: (body, signature) => connect.webhooks.constructEvent(body, signature, signingSecret)
   };
 }
