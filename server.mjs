@@ -34,7 +34,11 @@ export function createServer({auth=null,social=null} = {}) {
   try {
    const data = await readFile(new URL('./dist/' + asset[0], import.meta.url));
    res.writeHead(200, {'Content-Type':asset[1], 'Cache-Control':'no-cache'});
-   res.end(req.method === 'HEAD' ? undefined : data);
+   if (req.method === 'HEAD') return res.end();
+   if (path === '/' && auth) {
+    return res.end(data.toString('utf8').replace('data-home="discover"', 'data-home="community"'));
+   }
+   res.end(data);
   } catch {res.writeHead(500); res.end('Unable to load application');}
  });
 }

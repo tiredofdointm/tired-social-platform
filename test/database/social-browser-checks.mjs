@@ -40,7 +40,7 @@ export async function socialBrowserChecks(t,pool){
     await page.getByRole('button',{name,exact:true}).click();
    }
    const errors=[];for(const page of [a,b])page.on('pageerror',e=>errors.push(e.message));
-   await a.goto(config.origin+'/#community');await b.goto(config.origin+'/#community');
+   await a.goto(config.origin);await b.goto(config.origin+'/#community');
    await a.getByRole('heading',{name:'Your community',exact:true}).waitFor();
    await b.getByRole('heading',{name:'Your community',exact:true}).waitFor();
    if(!await a.getByLabel('Account bio',{exact:true}).isVisible())await a.getByText('Edit shared profile',{exact:true}).click();
