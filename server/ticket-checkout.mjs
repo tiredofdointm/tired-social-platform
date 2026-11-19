@@ -1,3 +1,4 @@
+import {liveRecords,sandboxRecords} from './live-booking-config.mjs';
 import {reconcileBookingPayment} from './booking-payments.mjs';
 import Stripe from 'stripe';
 import {transaction} from './database.mjs';
@@ -36,15 +37,18 @@ export async function checkout({db,actor,event,origin,payments,fail}){
  return {url:session.url};
 }
 
-export async function ticketWebhook({req,pool,payments,fail}){
+export async function ticketWebhook({req,pool,payments,fail,liveWebhook=false,verifyLiveBooking=null}){
  if(req.method!=='POST')fail(405,'method_not_allowed');
- if(!payments)fail(503,'sandbox_checkout_unavailable');
+ const verify=liveWebhook?verifyLiveBooking:payments?.verify;
+ if(!verify)fail(503,liveWebhook?'live_bookings_unavailable':'sandbox_checkout_unavailable');
  let size=0;const chunks=[];
  for await(const chunk of req){size+=chunk.length;if(size>256*1024)fail(413,'body_too_large');chunks.push(chunk);}
  let event;
- try{event=payments.verify(Buffer.concat(chunks),req.headers['stripe-signature']);}catch{fail(400,'invalid_signature');}
- if(event.livemode!==false)fail(400,'test_event_required');
- if(event.data.object.metadata?.tired_booking){await reconcileBookingPayment({event,pool,fail});return;}
+ try{event=verify(Buffer.concat(chunks),req.headers['stripe-signature']);}catch{fail(400,'invalid_signature');}
+ if(event.livemode!==liveWebhook)fail(400,liveWebhook?'live_event_required':'test_event_required');
+ if(liveWebhook&&(event.account||event.data.object.metadata?.tired_platform!=='tired.events'))return;
+ if(event.data.object.metadata?.tired_booking){await reconcileBookingPayment({event,pool,fail,records:liveWebhook?liveRecords:sandboxRecords});return;}
+ if(liveWebhook)return;
  const release=['checkout.session.expired','checkout.session.async_payment_failed'].includes(event.type);
  const paid=['checkout.session.completed','checkout.session.async_payment_succeeded'].includes(event.type);
  const refund=event.type==='charge.refunded';

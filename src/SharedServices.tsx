@@ -1,6 +1,7 @@
-import {useEffect, useState} from 'react';
+import {createContext,useContext,useEffect, useState} from 'react';
 import type {FormEvent, ReactNode} from 'react';
 
+const LiveBookings=createContext(false);
 const categories = ['Photography', 'DJ', 'Security', 'Other'];
 type Listing = {id:string; title:string; category:string; description:string};
 type DirectoryEntry = Listing & {display_name:string; handle:string; owned:boolean; availability:{id:string;start:string}[]};
@@ -16,7 +17,7 @@ type Publishing = {
 };
 type View =
   | {kind:'loading' | 'preview' | 'signed-out' | 'error'}
-  | {kind:'ready'; csrf:string; listings:DirectoryEntry[]; bookings:Booking[]; quotesEnabled:boolean; publishing:Publishing};
+  | {kind:'ready'; csrf:string; listings:DirectoryEntry[]; bookings:Booking[]; liveBookings:boolean;quotesEnabled:boolean; publishing:Publishing};
 
 class DirectoryError extends Error {
   constructor(readonly status:number) { super('Could not load or save services.'); }
@@ -55,9 +56,9 @@ export function SharedServices({preview, onPreviewMode}:{
         const [directory, publishing, reservations] = await Promise.all([
           get<{listings:DirectoryEntry[]}>('services', signal),
           get<Publishing>('services/publishing', signal),
-          get<{bookings:Booking[];quotesEnabled:boolean}>('services/bookings', signal),
+          get<{bookings:Booking[];liveBookings:boolean;quotesEnabled:boolean}>('services/bookings', signal),
         ]);
-        if (!signal.aborted) setView({kind:'ready', csrf:session.csrfToken, listings:directory.listings, bookings:reservations.bookings,quotesEnabled:reservations.quotesEnabled, publishing});
+        if (!signal.aborted) setView({kind:'ready', csrf:session.csrfToken, listings:directory.listings, bookings:reservations.bookings,liveBookings:reservations.liveBookings===true,quotesEnabled:reservations.quotesEnabled, publishing});
       } catch (error) {
         if (!signal.aborted) setView({kind:error instanceof DirectoryError && error.status === 401 ? 'signed-out' : 'error'});
       }
@@ -139,7 +140,7 @@ export function SharedServices({preview, onPreviewMode}:{
     (category === 'All categories' || item.category === category) &&
     [item.title, item.description, item.display_name, item.handle].some(value => value.toLowerCase().includes(search)));
 
-  return <section className="shared-community provider-directory stack">
+  return <LiveBookings.Provider value={view.liveBookings}><section className="shared-community provider-directory stack">
     <h1>Find talent</h1>
     <p role="status">{message}</p>
     <ProviderConnect csrf={view.csrf}/>
@@ -184,8 +185,8 @@ export function SharedServices({preview, onPreviewMode}:{
         <p>{new Date(booking.starts_at).toLocaleString()} · 1 hour · {booking.counterpart}</p>
         <p>{booking.confirmed ? 'Confirmed' : 'Awaiting provider approval'}</p>
         {booking.quote && <dl>
-          <dt>Sandbox service price</dt><dd>{usd.format(booking.quote.serviceCents/100)}</dd>
-          <dt>Platform fee</dt><dd>{usd.format(booking.quote.feeCents/100)}</dd>
+          <dt>{view.liveBookings?'Service price':'Sandbox service price'}</dt><dd>{usd.format(booking.quote.serviceCents/100)}</dd>
+          <dt>{view.liveBookings?'Platform fee (7.5%)':'Platform fee'}</dt><dd>{usd.format(booking.quote.feeCents/100)}</dd>
           <dt>Total quote</dt><dd>{usd.format(booking.quote.totalCents/100)}</dd>
         </dl>}
         {booking.quote && <BookingCheckout booking={booking} csrf={view.csrf}/>}
@@ -196,7 +197,7 @@ export function SharedServices({preview, onPreviewMode}:{
             void change('/bookings/'+booking.request_id+'/confirm','POST',
               amount?{servicePriceCents:Math.round(Number(amount)*100)}:undefined,()=>'Booking confirmed.');
           }}>
-            {view.quotesEnabled && <label>Sandbox service price (USD, optional)<input name="price" type="number" min="0.50" max="999999.99" step="0.01"/></label>}
+            {view.quotesEnabled && <label>{view.liveBookings?'Service price (USD, optional)':'Sandbox service price (USD, optional)'}<input name="price" type="number" min="0.50" max="999999.99" step="0.01"/></label>}
             <button disabled={busy}>Confirm request</button>
           </form>}
           {!['open','paid'].includes(booking.payment_state??'') && <button disabled={busy} onClick={() => void change('/bookings/'+booking.request_id+'/cancel','POST',undefined,()=>'Booking canceled.')}>Cancel booking</button>}
@@ -236,33 +237,34 @@ export function SharedServices({preview, onPreviewMode}:{
     <p role="status">{matches.length
       ? `${matches.length} service${matches.length === 1 ? '' : 's'} found.`
       : listings.length ? 'No services match your filters.' : 'No services have been published yet.'}</p>
-  </section>;
+  </section></LiveBookings.Provider>;
 }
 
 
 type ConnectStatus = {enabled:boolean;eligible:boolean;connected:boolean;transfersEnabled?:boolean;payoutsEnabled?:boolean;url?:string};
 
 function ProviderConnect({csrf}:{csrf:string}){
+ const live=useContext(LiveBookings);
  const [status,setStatus]=useState<ConnectStatus|null>(null);
  const [busy,setBusy]=useState(false);
  const [message,setMessage]=useState('');
  useEffect(()=>{
   const controller=new AbortController();
   void get<ConnectStatus>('services/connect',controller.signal).then(setStatus).catch(()=>{
-   if(!controller.signal.aborted)setMessage('Could not load Stripe sandbox status.');
+   if(!controller.signal.aborted)setMessage('Could not load Stripe account status.');
   });
   return ()=>controller.abort();
  },[]);
  if(!status?.eligible)return message?<p role="status">{message}</p>:null;
  return <section className="panel">
-  <h2>Stripe sandbox onboarding</h2>
+  <h2>{live?'Set up provider payouts':'Stripe sandbox onboarding'}</h2>
   {status.connected && <p>Transfers {status.transfersEnabled?'enabled':'pending'} · Payouts {status.payoutsEnabled?'enabled':'pending'}</p>}
   <button disabled={busy} onClick={async()=>{
    setBusy(true);
    setMessage('');
    try{
     const response=await fetch('/api/v1/services/connect',{method:'POST',headers:{'X-CSRF-Token':csrf}});
-    if(!response.ok)throw Error('Could not open Stripe sandbox onboarding.');
+    if(!response.ok)throw Error('Could not open Stripe onboarding.');
     const result:ConnectStatus=await response.json();
     if(!result.url)throw Error('Publish a provider listing before onboarding.');
     window.location.assign(result.url);
@@ -276,15 +278,16 @@ function ProviderConnect({csrf}:{csrf:string}){
 
 
 function BookingCheckout({booking,csrf}:{booking:Booking;csrf:string}){
+ const live=useContext(LiveBookings);
  const [message,setMessage]=useState('');
  const [url,setUrl]=useState('');
  const [busy,setBusy]=useState(false);
  const paymentState=booking.payment_state;
  return <>
-  {paymentState==='paid'&&<p>Sandbox payment confirmed.</p>}
-  {paymentState==='open'&&<p>Sandbox payment is open. Refresh bookings after paying.</p>}
-  {paymentState==='expired'&&<p>Sandbox checkout expired. Cancel and request the slot again to get a new quote.</p>}
-  {paymentState==='refunded'&&<p>Sandbox payment refunded.</p>}
+  {paymentState==='paid'&&<p>{live?'Payment confirmed.':'Sandbox payment confirmed.'}</p>}
+  {paymentState==='open'&&<p>{live?'Payment is open. Refresh bookings after paying.':'Sandbox payment is open. Refresh bookings after paying.'}</p>}
+  {paymentState==='expired'&&<p>{live?'Checkout expired. Cancel and request the slot again to get a new quote.':'Sandbox checkout expired. Cancel and request the slot again to get a new quote.'}</p>}
+  {paymentState==='refunded'&&<p>{live?'Payment refunded.':'Sandbox payment refunded.'}</p>}
   {booking.provider && (paymentState==='paid'||paymentState==='refunded') &&
    <BookingSettlement requestId={booking.request_id} csrf={csrf} refundable={paymentState==='paid'}/>}
   {!booking.provider && Date.parse(booking.starts_at)>Date.now() && (!paymentState||paymentState==='open') && <button disabled={busy} onClick={async()=>{
@@ -296,11 +299,11 @@ function BookingCheckout({booking,csrf}:{booking:Booking;csrf:string}){
     const result=await response.json();
     if(!response.ok)throw Error(result.error?.message??'Checkout could not open.');
     setUrl(result.url);
-    setMessage('Sandbox checkout is ready.');
+    setMessage(live?'Checkout is ready.':'Sandbox checkout is ready.');
     window.location.assign(result.url);
    }catch(error){setMessage((error as Error).message);}
    finally{setBusy(false);}
-  }}>{paymentState==='open'?'Resume sandbox checkout':'Open sandbox checkout'}</button>}
+  }}>{paymentState==='open'?'Resume ':'Open '}{live?'checkout':'sandbox checkout'}</button>}
   {message && <p role="status">{message}{url && <> <a href={url} target="_blank" rel="noopener noreferrer">Open Stripe in a new tab</a></>}</p>}
  </>;
 }
@@ -309,11 +312,12 @@ function BookingCheckout({booking,csrf}:{booking:Booking;csrf:string}){
 type BookingTransfer = {chargedCents:number;refundedCents:number;transferredCents:number;reversedCents:number};
 
 function BookingSettlement({requestId,csrf,refundable}:{requestId:string;csrf:string;refundable:boolean}){
+ const live=useContext(LiveBookings);
  const [transfer,setTransfer]=useState<BookingTransfer|null>(null);
  const [message,setMessage]=useState('');
  const [busy,setBusy]=useState(false);
  async function run(action:'refund'|'transfer'){
-  if(action==='refund'&&!window.confirm('Refund this sandbox booking and reverse the matching provider transfer?'))return;
+  if(action==='refund'&&!window.confirm(live?'Refund this payment and reverse the provider transfer?':'Refund this sandbox booking and reverse the matching provider transfer?'))return;
   setBusy(true);
   setMessage('');
   try{
@@ -331,7 +335,7 @@ function BookingSettlement({requestId,csrf,refundable}:{requestId:string;csrf:st
  }
  return <>
   <div className="actions">
-   {refundable && <button type="button" disabled={busy} onClick={()=>void run('refund')}>Refund sandbox booking</button>}
+   {refundable && <button type="button" disabled={busy} onClick={()=>void run('refund')}>{live?'Refund booking':'Refund sandbox booking'}</button>}
    <button type="button" disabled={busy} onClick={()=>void run('transfer')}>Verify Stripe transfer</button>
   </div>
   {message&&<p role="status">{message}</p>}
@@ -357,6 +361,7 @@ type PayoutMatch=
  | {status:'adjusted'|'missing_payment'|'mismatch'};
 
 function BookingPayoutCheck({bookings}:{bookings:FundedBooking[]}){
+ const live=useContext(LiveBookings);
  const [selected,setSelected]=useState(bookings[0].id);
  const [message,setMessage]=useState('');
  const [busy,setBusy]=useState(false);
@@ -369,11 +374,11 @@ function BookingPayoutCheck({bookings}:{bookings:FundedBooking[]}){
    const result=await get<PayoutMatch>('services/bookings/'+selected+'/payout',new AbortController().signal);
    switch(result.status){
     case 'matched':
-     setMessage(`${usd.format(result.contributionCents/100)} from this booking was included in a paid ${usd.format(result.payoutCents/100)} sandbox payout.`);
+     setMessage(`${usd.format(result.contributionCents/100)} from this booking was included in a paid ${usd.format(result.payoutCents/100)} ${live?'payout':'sandbox payout'}.`);
      break;
     case 'unverified':
      setMessage(result.payoutsChecked===0 ? 'Stripe has no recorded payouts for this provider yet.' :
-      'This booking could not be verified in the most recent sandbox payouts checked ('+result.payoutsChecked+').');
+      'This booking could not be verified in the most recent payouts checked ('+result.payoutsChecked+').');
      break;
     case 'adjusted': setMessage('This booking has a refund or transfer reversal.'); break;
     case 'missing_payment': setMessage('Stripe has not supplied the destination payment for this transfer.'); break;
@@ -399,6 +404,7 @@ function BookingPayoutCheck({bookings}:{bookings:FundedBooking[]}){
 }
 
 function SandboxPayouts(){
+ const live=useContext(LiveBookings);
  type Report={payouts:SandboxPayout[];balance:{availableCents:number;pendingCents:number};bookings:FundedBooking[]};
  const [report,setReport]=useState<Report|null>(null);
  const payouts=report?.payouts;
@@ -414,11 +420,11 @@ function SandboxPayouts(){
   setMessage('');
   try{
    setReport(await get<Report>('services/connect/payouts',new AbortController().signal));
-  }catch{setReport(null);setMessage('Could not load sandbox payouts. Try again.');}
+  }catch{setReport(null);setMessage('Could not load payouts. Try again.');}
   finally{setBusy(false);}
  }
  return <details>
-  <summary>Sandbox payouts</summary>
+  <summary>{live?'Provider payouts':'Sandbox payouts'}</summary>
   <button type="button" disabled={busy} onClick={()=>void load()}>{busy?'Loading payouts…':payouts?'Refresh payouts':'Load payouts'}</button>
   {message && <p role="status">{message}</p>}
   {report?.balance && <dl>
@@ -426,7 +432,7 @@ function SandboxPayouts(){
    <dt>Available for payout</dt><dd>{usd.format(report.balance.availableCents/100)}</dd>
   </dl>}
   {!busy && !!report?.bookings?.length && <BookingPayoutCheck bookings={report.bookings}/>}
-  {payouts?.length===0 && <p>No payouts recorded in this sandbox account.</p>}
+  {payouts?.length===0 && <p>{live?'No payouts recorded for this account.':'No payouts recorded in this sandbox account.'}</p>}
   {!!payouts?.length && <ul>{payouts.map(payout=>{
    const currency=new Intl.NumberFormat('en-US',{style:'currency',currency:payout.currency});
    return <li key={payout.id}>
