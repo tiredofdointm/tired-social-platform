@@ -1,15 +1,20 @@
-import {useEffect,useState} from 'react';
+import type {CreateRequest} from './SharedCreate';
+import {useEffect,useRef,useState} from 'react';
 import type {FormEvent} from 'react';
 type Profile={id:string;handle:string;display_name:string;bio:string|null;visibility:string;share_event_attendance?:boolean;follow_status?:string|null};
 type Post={id:string;author_id:string;body:string;visibility:string;display_name:string;handle:string;created_at:string;likes:number;liked:boolean;follow_status:string|null};
 const feedModes=[['for-you','For you'],['latest','Latest posts'],['following','Following accounts']] as const;
 type Comment={id:string;body:string;display_name:string};
-export function SharedSocial(){
+export function SharedSocial({create}:{create:CreateRequest}){
+ const composer=useRef<HTMLTextAreaElement>(null);
  const [phase,setPhase]=useState('loading'),[me,setMe]=useState<Profile|null>(null),[csrf,setCsrf]=useState('');
  const [posts,setPosts]=useState<Post[]>([]),[cursor,setCursor]=useState<string|null>(null),[mode,setMode]=useState('for-you');
  const [requests,setRequests]=useState<Profile[]>([]),[blockedAccounts,setBlockedAccounts]=useState<Profile[]>([]),[lookup,setLookup]=useState(''),[found,setFound]=useState<Profile|null>(null);
  const [body,setBody]=useState(''),[visibility,setVisibility]=useState('public'),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
  const [comments,setComments]=useState<Record<string,Comment[]>>({}),[drafts,setDrafts]=useState<Record<string,string>>({});
+ useEffect(()=>{
+  if(phase==='ready'&&create.target==='post'){composer.current?.focus();create.handled();}
+ },[phase,create.target,create.handled]);
  async function api(path:string,method='GET',data?:unknown){
   const response=await fetch('/api/v1/'+path,{method,cache:'no-store',headers:method==='GET'?{}:{'Content-Type':'application/json','X-CSRF-Token':csrf},body:data===undefined?undefined:JSON.stringify(data)});
   const value=await response.json();
@@ -46,7 +51,7 @@ export function SharedSocial(){
  {requests.length>0&&<section className="panel"><h2>Follow requests</h2>{requests.map(person=><div className="shared-person" key={person.id}><span>@{person.handle}</span><button disabled={busy} onClick={()=>void action(async()=>{await api(`follows/${person.id}/accept`,'PUT');await refresh();})}>Accept {person.display_name}</button><button disabled={busy} onClick={()=>void action(async()=>{await api(`follows/${person.id}/accept`,'DELETE');await refresh();})}>Decline {person.display_name}</button><button disabled={busy} onClick={()=>void action(async()=>{await api(`blocks/${person.id}`,'PUT');await refresh();})}>Block {person.display_name}</button></div>)}</section>}
  {blockedAccounts.length>0&&<details className="panel"><summary>Blocked accounts</summary>{blockedAccounts.map(person=><div className="shared-person" key={person.id}><span>@{person.handle}</span><button disabled={busy} onClick={()=>void action(async()=>{await api(`blocks/${person.id}`,'DELETE');await refresh();})}>Unblock {person.display_name}</button></div>)}</details>}
  <form className="panel" onSubmit={e=>{e.preventDefault();void action(async()=>setFound((await api('profiles/'+encodeURIComponent(lookup))).profile));}}><label>Find account by handle<input value={lookup} onChange={e=>{setLookup(e.target.value);setFound(null);}} pattern="[a-z0-9_]{3,30}" required/></label><button disabled={busy}>Find account</button>{found&&<div className="shared-person"><span>{found.display_name} · @{found.handle}{found.bio&&<p>{found.bio}</p>}</span>{found.id!==me.id&&<><button type="button" disabled={busy} onClick={()=>void follow(found)}>{found.follow_status==='pending'?'Cancel request':found.follow_status?'Unfollow':'Follow'}</button><button type="button" disabled={busy} onClick={()=>void action(async()=>{await api(`blocks/${found.id}`,'PUT');setFound(null);await refresh();})}>Block account</button></>}</div>}</form>
- <form className="panel" onSubmit={submit}><label>Shared post<textarea aria-label="Shared post" required maxLength={2000} value={body} onChange={e=>setBody(e.target.value)} placeholder="What’s happening?"/></label><div className="actions"><label>Who can see this<select aria-label="Who can see this" value={visibility} onChange={e=>setVisibility(e.target.value)}><option value="public">Community</option><option value="followers">Accepted followers</option><option value="private">Only me</option></select></label><button className="primary" disabled={busy||!body.trim()}>Publish post</button></div></form>
+ <form className="panel" onSubmit={submit}><label>Shared post<textarea ref={composer} aria-label="Shared post" required maxLength={2000} value={body} onChange={e=>setBody(e.target.value)} placeholder="What’s happening?"/></label><div className="actions"><label>Who can see this<select aria-label="Who can see this" value={visibility} onChange={e=>setVisibility(e.target.value)}><option value="public">Community</option><option value="followers">Accepted followers</option><option value="private">Only me</option></select></label><button className="primary" disabled={busy||!body.trim()}>Publish post</button></div></form>
  <div className="filters" aria-label="Shared feed mode">{feedModes.map(([value,label])=><button key={value} aria-pressed={mode===value} disabled={busy} onClick={()=>void action(async()=>{await feed(value);setMode(value);})}>{label}</button>)}<button disabled={busy} onClick={()=>void action(refresh)}>Refresh community</button></div>
  {mode==='for-you'&&<p className="small muted">Posts from accounts you follow get a 24-hour boost in this feed.</p>}
  {!posts.length&&<div className="panel"><h2>Your next conversation starts here.</h2><p>No posts to show in this feed. Share something or follow an account.</p></div>}

@@ -1,6 +1,7 @@
+import type {CreateRequest} from './SharedCreate';
 import {downloadEventCalendar} from './eventCalendar';
 import {rememberEventForSignIn,sharedEventUrl} from './sharedEventLink';
-import {useEffect,useRef,useState} from 'react';
+import {useEffect,useLayoutEffect,useRef,useState} from 'react';
 import type {FormEvent} from 'react';
 
 type Event = {id:string;title:string;venue:string;starts_at:string;capacity:number;attending:number;attending_friends?:string[];going:boolean;ticket_price_cents:number|null;ticketQuote?:{ticketCents:number;feeCents:number;totalCents:number};held:number;my_hold_until:string|null;ticket_state:string|null;owner:boolean;upcoming:boolean;my_ticket_code:string|null;my_checked_in_at:string|null};
@@ -8,7 +9,7 @@ type Plan = {id:string;title:string;details:string|null;starts_at:string|null;ow
 
 type Publishing={manual_review:boolean;admin:boolean;submissions:(Event&{publication:string})[]};
 
-export function SharedEvents({linkedId}:{linkedId:string|null}){
+export function SharedEvents({linkedId,create:request}:{linkedId:string|null;create:CreateRequest}){
  const linkedHeading=useRef<HTMLHeadingElement>(null);
  const [publishing,setPublishing]=useState<Publishing|null>(null);
  const [events,setEvents]=useState<Event[]>([]);
@@ -23,6 +24,15 @@ export function SharedEvents({linkedId}:{linkedId:string|null}){
  const [busy,setBusy]=useState(false);
  const [kind,setKind]=useState('events');
 
+ const titleInput=useRef<HTMLInputElement>(null);
+ useLayoutEffect(()=>{
+  if(state!=='ready'||(request.target!=='event'&&request.target!=='plan'))return;
+  setKind(request.target==='event'?'events':'plans');
+  const details=titleInput.current?.closest('details');
+  if(details)details.open=true;
+  titleInput.current?.focus();
+  request.handled();
+ },[state,request.target,request.handled]);
  async function api<T>(path:string,method='GET',body?:unknown):Promise<T>{
   const response=await fetch('/api/v1/'+path,{method,headers:{'Content-Type':'application/json','X-CSRF-Token':token},
    body:body===undefined?undefined:JSON.stringify(body)});
@@ -106,7 +116,7 @@ export function SharedEvents({linkedId}:{linkedId:string|null}){
   <details className="panel"><summary>Create an event or plan</summary>
    <form onSubmit={create}>
     <label>Type<select aria-label="Type" value={kind} onChange={event=>setKind(event.target.value)}><option value="events">Community event</option><option value="plans">Private friend plan</option></select></label>
-    <label>Title<input name="title" required maxLength={120}/></label>
+    <label>Title<input ref={titleInput} name="title" required maxLength={120}/></label>
     <label>Start time in your local timezone<input name="startsAt" type="datetime-local" required/></label>
     {kind==='events'?<>
      <label>Venue<input name="venue" required maxLength={160}/></label>
