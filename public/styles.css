@@ -101,3 +101,6 @@ body[data-theme=light] .error { color: #9e3021; }
 @media (max-width: 400px) {
   .hero-copy h1 { font-size: 34px; }
 }
+
+.shared-community label.attendance-sharing{display:flex;flex-direction:row;align-items:center;gap:.65rem}
+.attendance-sharing input[type=checkbox]{width:auto;flex:none}
