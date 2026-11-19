@@ -3,6 +3,7 @@ set -euo pipefail
 
 service=tired-social-platform
 region=europe-west1
+production_runtime="tired-social-payments-runtime@$service.iam.gserviceaccount.com"
 origin=https://tired.events
 tag=public-check
 flags=(--project="$service" --region="$region")
@@ -57,18 +58,18 @@ else
 fi
 
 gcloud run deploy "$service" "${flags[@]}" --image="$image" \
-  --tag="$tag" --no-traffic --update-env-vars="$env_update" --remove-env-vars="$env_remove" \
+  --tag="$tag" --service-account="$production_runtime" --no-traffic --update-env-vars="$env_update" --remove-env-vars="$env_remove" \
   --remove-secrets="$secret_remove" "${secret_update[@]}"
 
 route=$(gcloud run services describe "$service" "${flags[@]}" --format=json |
   jq -ce --arg tag "$tag" '.status.traffic[] | select(.tag==$tag and (.percent // 0)==0)')
 preview=$(jq -er '.url' <<<"$route")
 candidate=$(jq -er '.revisionName' <<<"$route")
-actual_image=$(gcloud run revisions describe "$candidate" "${flags[@]}" --format='value(status.imageDigest)')
-if [[ "$actual_image" != "$image" ]]; then
-  echo "The tagged candidate does not match the requested image." >&2
-  exit 1
-fi
+gcloud run revisions describe "$candidate" "${flags[@]}" --format=json |
+  jq -e --arg image "$image" --arg runtime "$production_runtime" '
+    .status.imageDigest==$image and .spec.serviceAccountName==$runtime and
+    all(.spec.containers[0].env[]?; (.name | startswith("STRIPE_TEST_") | not))
+  ' >/dev/null
 
 curl -fsS --max-time 15 "$preview/api/health" |
   jq -e --arg revision "$candidate" '.status=="ok" and .revision==$revision' >/dev/null
