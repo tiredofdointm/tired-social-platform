@@ -163,6 +163,20 @@ export async function socialHttpChecks(t,pool){
    assert.equal((await request(bob,'feed?mode=following&cursor='+encodeURIComponent(feed.nextCursor))).data.posts.length,0);
    assert.equal((await request(bob,'feed?cursor=invalid')).status,400);
    assert.equal((await request(bob,'feed?limit=999')).status,400);
+   const ownPost=(await request(bob,'posts','POST',{body:'Newer public post',visibility:'public'})).data.post;
+   const ranked=(await request(bob,'feed?mode=for-you&limit=1')).data;
+   assert.equal(ranked.posts[0].id,post.id);
+   assert.equal('feed_position' in ranked.posts[0],false);
+   const nextRanked=(await request(bob,'feed?mode=for-you&cursor='+encodeURIComponent(ranked.nextCursor))).data;
+   assert.ok(nextRanked.posts.some(p=>p.id===ownPost.id));
+   assert.ok(!nextRanked.posts.some(p=>p.id===post.id||p.id===privatePost.id));
+   const latest=(await request(bob,'feed?mode=latest')).data.posts;
+   assert.ok(latest.findIndex(p=>p.id===ownPost.id)<latest.findIndex(p=>p.id===post.id));
+   assert.equal((await request(bob,'feed?mode=following&cursor='+encodeURIComponent(ranked.nextCursor))).status,400);
+   await pool.query("UPDATE posts SET created_at=created_at-interval '2 days' WHERE id=$1",[post.id]);
+   const beyondBoost=(await request(bob,'feed?mode=for-you')).data.posts;
+   assert.ok(beyondBoost.findIndex(p=>p.id===ownPost.id)<beyondBoost.findIndex(p=>p.id===post.id));
+   assert.equal((await request(bob,'posts/'+ownPost.id,'DELETE')).status,200);
    assert.equal((await request(alice,`blocks/${bob.userId}`,'PUT')).status,200);
    assert.ok((await request(alice,'blocks')).data.accounts.some(p=>p.id===bob.userId));
    assert.equal((await request(bob,'blocks')).data.accounts.length,0);
@@ -171,6 +185,7 @@ export async function socialHttpChecks(t,pool){
    assert.equal((await request(bob,'profiles/social_alice')).status,404);
    assert.equal((await request(alice,`posts/${post.id}/comments`)).data.comments.length,0);
    assert.equal((await request(bob,'feed?mode=following')).data.posts.length,0);
+   assert.ok(!(await request(bob,'feed?mode=for-you')).data.posts.some(p=>p.author_id===alice.userId));
    await request(alice,`blocks/${bob.userId}`,'DELETE');
    assert.equal((await request(bob,`posts/${post.id}`)).status,404,'unblocking never restores accepted follow');
    assert.equal((await request(alice,`posts/${post.id}`,'PATCH',{body:'Now public',visibility:'public'})).status,200);

@@ -61,12 +61,14 @@ export function createSocialHandler({config,pool,payments=testPayments(),connect
    let match;
    if(path==='/api/v1/feed' && method==='GET'){
     const limit=Number(url.searchParams.get('limit')??20),mode=url.searchParams.get('mode')??'latest';
-    if(!Number.isInteger(limit)||limit<1||limit>50||!['latest','following'].includes(mode))fail(400,'invalid_page');
+    if(!Number.isInteger(limit)||limit<1||limit>50||!['latest','following','for-you'].includes(mode))fail(400,'invalid_page');
     let before=null;const cursor=url.searchParams.get('cursor');
     if(cursor){try{before=JSON.parse(Buffer.from(cursor,'base64url').toString());}catch{fail(400,'invalid_cursor');}
-     if(!before||!uuid(before.id)||typeof before.createdAt!=='string'||before.createdAt.length>50||!Number.isFinite(Date.parse(before.createdAt)))fail(400,'invalid_cursor');}
-    const posts=await repo.listFeed(actor,{limit,before,mode});const last=posts.at(-1);
-    send(200,{posts,nextCursor:posts.length===limit?Buffer.from(JSON.stringify({createdAt:last.created_at,id:last.id})).toString('base64url'):null});
+     if(!before||(before.mode!==undefined?before.mode!==mode:mode==='for-you')||!uuid(before.id)||typeof before.createdAt!=='string'||before.createdAt.length>50||!Number.isFinite(Date.parse(before.createdAt)))fail(400,'invalid_cursor');}
+    const rows=await repo.listFeed(actor,{limit,before,mode});
+    const last=rows.at(-1);
+    const posts=rows.map(({feed_position,...post})=>post);
+    send(200,{posts,nextCursor:posts.length===limit?Buffer.from(JSON.stringify({createdAt:last.feed_position,id:last.id,mode})).toString('base64url'):null});
    }else if(path==='/api/v1/me/profile' && method==='PATCH'){
     const body=await readJson(req);fields(body,['handle','display_name','bio','visibility']);
     if(typeof body.handle!=='string'||!/^[a-z0-9_]{3,30}$/.test(body.handle))fail(400,'invalid_handle');
