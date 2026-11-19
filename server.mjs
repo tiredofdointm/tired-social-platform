@@ -51,7 +51,9 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const {createDatabasePool}=await import('./server/database.mjs');
   pool=createDatabasePool(); auth=createAuthHandler({config,pool});
   const {createSocialHandler}=await import('./server/social-http.mjs');
-  social=createSocialHandler({config,pool});
+  const {liveBookingConfig}=await import('./server/live-booking-config.mjs');
+  const live=await liveBookingConfig(config.origin);
+  social=createSocialHandler({config,pool,...live});
  }
  const server=createServer({auth,social}).listen(port,'0.0.0.0',()=>console.log(JSON.stringify({event:'server_started',port})));
  for(const signal of ['SIGTERM','SIGINT']) process.once(signal,()=>{

@@ -1,12 +1,12 @@
 // Bound the work done by a single dashboard request. Partial totals cannot verify a payout.
-export async function reconcilePayout(payout, listEntries, destinationPayment = null) {
+export async function reconcilePayout(payout, listEntries, destinationPayment = null, live = false) {
   const result = {
     id: payout.id, amountCents: payout.amount, currency: payout.currency,
     status: payout.status, arrivalDate: payout.arrival_date,
     entries: null, fundingCents: null, bookingFundingCents: null
   };
   const finish = reconciliation => ({...result, reconciliation});
-  if (payout.livemode !== false) throw Error('Expected a sandbox payout');
+  if (payout.livemode !== live) throw Error('Unexpected Stripe payout mode');
   if (!payout.automatic || payout.type !== 'bank_account' || payout.currency !== 'usd') return finish('unsupported');
   if (['failed', 'canceled'].includes(payout.status)) return finish('not_paid');
   if (payout.reconciliation_status === 'not_applicable') return finish('unsupported');
@@ -40,12 +40,12 @@ export async function reconcilePayout(payout, listEntries, destinationPayment = 
   return finish('more_entries');
 }
 
-export async function recentPayouts(connect, account, fail, destinationPayment = null) {
+export async function recentPayouts(connect, account, fail, destinationPayment = null, live = false) {
   const scope = {stripeAccount: account};
   const page = await connect.payouts.list({limit: 5}, scope);
-  if (page.data.some(payout => payout.livemode !== false)) fail(503, 'sandbox_payouts_unavailable');
+  if (page.data.some(payout => payout.livemode !== live)) fail(503, 'sandbox_payouts_unavailable');
   const entries = params => connect.balanceTransactions.list(params, scope);
-  return Promise.all(page.data.map(payout => reconcilePayout(payout, entries, destinationPayment)));
+  return Promise.all(page.data.map(payout => reconcilePayout(payout, entries, destinationPayment, live)));
 }
 
 export function matchBookingPayout(reports, expectedCents) {
@@ -58,8 +58,8 @@ export function matchBookingPayout(reports, expectedCents) {
   return {status: 'matched', contributionCents: payout.bookingFundingCents, payoutCents: payout.amountCents};
 }
 
-export function usdBalance(balance) {
-  if (balance.livemode !== false) throw Error('Expected a sandbox balance');
+export function usdBalance(balance, live=false) {
+  if (balance.livemode !== live) throw Error('Unexpected Stripe balance mode');
   const sum = amounts => amounts.filter(row => row.currency === 'usd').reduce((total, row) => total + row.amount, 0);
   return {availableCents: sum(balance.available), pendingCents: sum(balance.pending)};
 }

@@ -1,3 +1,4 @@
+import {sandboxRecords} from './live-booking-config.mjs';
 import {sandboxBookingFee} from './bookings.mjs';
 import {testConnect,providerConnect,providerPayouts} from './provider-connect.mjs';
 import {testPayments,ticketWebhook} from './ticket-checkout.mjs';
@@ -23,17 +24,18 @@ async function readJson(req){
  });
  try{return JSON.parse(Buffer.concat(chunks).toString('utf8'));}catch{fail(400,'invalid_json');}
 }
-export function createSocialHandler({config,pool,payments=testPayments(),connect=testConnect(),bookingFeeBps=sandboxBookingFee(connect)}){
+export function createSocialHandler({config,pool,payments=testPayments(),connect=testConnect(),bookingFeeBps=sandboxBookingFee(connect),records=sandboxRecords,verifyLiveBooking=null}){
  const sessions=authRepository(pool),repo=socialRepository(pool);
  let windowStart=Date.now(),writes=0;
  return async(req,res,url)=>{
   const path=url.pathname;
-  const webhook=path==='/api/v1/ticket-webhook';
+  const liveWebhook=path==='/api/v1/booking-webhook';
+  const webhook=liveWebhook||path==='/api/v1/ticket-webhook';
   if(!webhook && !/^\/api\/v1\/(feed|posts|profiles|follows|blocks|events|plans|services)(\/|$)/.test(path) && path!=='/api/v1/me/profile' && path!=='/api/v1/me/follow-requests')return false;
   const requestId=randomUUID();res.setHeader('Cache-Control','no-store');res.setHeader('X-Request-ID',requestId);
   function send(status,data){res.writeHead(status,{'Content-Type':'application/json'});res.end(JSON.stringify(data));}
   try{
-   if(webhook){await ticketWebhook({req,pool,payments,fail});send(200,{received:true});return true;}
+   if(webhook){await ticketWebhook({req,pool,payments,fail,liveWebhook,verifyLiveBooking});send(200,{received:true});return true;}
    const token=sessionTokenFrom(req),user=await sessions.session(token);
    if(!user)fail(401,'authentication_required');
    const actor=user.id,method=req.method;
@@ -47,15 +49,15 @@ export function createSocialHandler({config,pool,payments=testPayments(),connect
     return true;
    }
    if(path==='/api/v1/services/connect/payouts'){
-    await providerPayouts({pool,connect,actor,method,send,fail});
+    await providerPayouts({pool,connect,actor,method,send,fail,records});
     return true;
    }
    if(path==='/api/v1/services/connect'){
-    await providerConnect({pool,connect,actor,method,origin:config.origin,send,fail});
+    await providerConnect({pool,connect,actor,method,origin:config.origin,send,fail,records});
     return true;
    }
    if(/^\/api\/v1\/services(\/|$)/.test(path)){
-    await services({pool,actor,path,method,req,send,fail,readJson,fields,text,uuid,bookingFeeBps,connect,origin:config.origin});
+    await services({pool,actor,path,method,req,send,fail,readJson,fields,text,uuid,bookingFeeBps,connect,records,origin:config.origin});
     return true;
    }
    let match;

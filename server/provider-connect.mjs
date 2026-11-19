@@ -1,3 +1,4 @@
+import {sandboxRecords} from './live-booking-config.mjs';
 import Stripe from 'stripe';
 import {recentPayouts, usdBalance} from './payout-report.mjs';
 import {transaction} from './database.mjs';
@@ -8,7 +9,7 @@ export function testConnect(env=process.env){
  return new Stripe(env.STRIPE_TEST_SECRET_KEY,{timeout:5000,maxNetworkRetries:0});
 }
 
-export async function providerConnect({pool,connect,actor,method,origin,send,fail}){
+export async function providerConnect({pool,connect,actor,method,origin,send,fail,records=sandboxRecords}){
  if(!connect)return send(200,{enabled:false});
  if(!['GET','POST'].includes(method))fail(405,'method_not_allowed');
  const result=await transaction(pool,async db=>{
@@ -17,15 +18,15 @@ export async function providerConnect({pool,connect,actor,method,origin,send,fai
    FOR NO KEY UPDATE`,[actor]);
   if(!provider.rowCount)return {enabled:true,eligible:false};
 
-  const existing=await db.query('SELECT stripe_account_id FROM provider_connect_accounts WHERE provider_id=$1',[actor]);
+  const existing=await db.query(`SELECT stripe_account_id FROM ${records.accounts} WHERE provider_id=$1`,[actor]);
   let accountId=existing.rows[0]?.stripe_account_id;
   if(!accountId && method==='POST'){
    const account=await connect.accounts.create({country:'US',
     controller:{fees:{payer:'application'},losses:{payments:'application'},requirement_collection:'stripe',stripe_dashboard:{type:'express'}},
     capabilities:{transfers:{requested:true}}
-   },{idempotencyKey:'sandbox-provider-'+actor});
+   },{idempotencyKey:(records.live?'live-provider-':'sandbox-provider-')+actor});
    accountId=account.id;
-   await db.query('INSERT INTO provider_connect_accounts(provider_id,stripe_account_id) VALUES($1,$2)',[actor,accountId]);
+   await db.query(`INSERT INTO ${records.accounts}(provider_id,stripe_account_id) VALUES($1,$2)`,[actor,accountId]);
   }
   return {enabled:true,eligible:true,accountId};
  });
@@ -42,22 +43,22 @@ export async function providerConnect({pool,connect,actor,method,origin,send,fai
  return send(200,{...status,url:link.url});
 }
 
-export async function providerPayouts({pool,connect,actor,method,send,fail}){
+export async function providerPayouts({pool,connect,actor,method,send,fail,records=sandboxRecords}){
  if(method!=='GET')fail(405,'method_not_allowed');
  if(!connect)fail(503,'sandbox_payouts_unavailable');
- const {rows:[provider]}=await pool.query('SELECT stripe_account_id FROM provider_connect_accounts WHERE provider_id=$1',[actor]);
+ const {rows:[provider]}=await pool.query(`SELECT stripe_account_id FROM ${records.accounts} WHERE provider_id=$1`,[actor]);
  if(!provider)fail(404,'not_found');
 
  const account=provider.stripe_account_id;
  const [payouts,balance,bookings]=await Promise.all([
-  recentPayouts(connect,account,fail),
+  recentPayouts(connect,account,fail,null,records.live),
   connect.balance.retrieve({},{stripeAccount:account}),
   pool.query(`SELECT b.request_id AS id, l.title, s.starts_at AS "startsAt", b.service_cents AS "serviceCents"
-   FROM booking_payments b JOIN service_slots s ON s.request_id=b.request_id
+   FROM ${records.payments} b JOIN service_slots s ON s.request_id=b.request_id
    JOIN service_listings l ON l.id=s.listing_id
    WHERE s.provider_id=$1 AND b.destination_account=$2 AND b.state='paid' AND b.refunded_cents=0
    ORDER BY b.expires_at DESC, b.request_id LIMIT 20`,[actor,account])
  ]);
- if(balance.livemode!==false)fail(503,'sandbox_payouts_unavailable');
- return send(200,{payouts,balance:usdBalance(balance),bookings:bookings.rows});
+ if(balance.livemode!==records.live)fail(503,'sandbox_payouts_unavailable');
+ return send(200,{payouts,balance:usdBalance(balance,records.live),bookings:bookings.rows});
 }

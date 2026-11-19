@@ -1,3 +1,4 @@
+import {liveBookingChecks} from './live-booking-checks.mjs';
 import { socialBrowserChecks } from './social-browser-checks.mjs';
 import { socialHttpChecks } from './social-http-checks.mjs';
 import { authChecks } from './auth-checks.mjs';
@@ -113,4 +114,5 @@ test('migration runner and parameterized social access', async t => {
   await authChecks(t,pool);
   await socialHttpChecks(t,pool);
   await socialBrowserChecks(t,pool);
+  await liveBookingChecks(t,pool);
 });
