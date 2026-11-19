@@ -55,3 +55,5 @@ rotation, CSRF, expiry, suspension and logout. Its provider exchange is mocked.
 existing real browser preview journeys. These are not live Google OAuth evidence.
 
 Google sign-in and the shared community are active on the deployed Cloud Run service. Two independent Google accounts completed the signed-in booking journey on the tagged staging revision. See [SESSION.md](SESSION.md) for release checkpoints. Verify the new return-page and retry flows on staging after applying migration 014.
+
+The owner also tested two independent Google accounts on the production hostname. Both callbacks opened the protected account page. A production sign-out revoked its server session and the next account request returned HTTP 401. The [production verification record](SESSION.md#production-google-sign-in) contains the time window and aggregate database evidence.

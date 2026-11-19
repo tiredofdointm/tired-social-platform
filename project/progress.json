@@ -376,24 +376,18 @@
     {
       "id": "A02",
       "title": "Activate and verify live Google identity",
-      "status": "blocked",
+      "status": "done",
       "priority": 1,
       "dependsOn": [
         "A01",
         "C02"
       ],
       "acceptance": "Dedicated cloud database and OAuth client configured; two real Google accounts sign in over HTTPS and logout revokes access.",
-      "evidence": [],
-      "workstream": "A",
-      "blocker": {
-        "cause": "The second Google account is available, but TinyFish declined to start the production browser check because the wallet has insufficient credit.",
-        "retryCondition": "The account holder completes the second production login and logout checks, or a usable browser session becomes available.",
-        "nextAction": "Check that two independent Google accounts sign in over HTTPS, validate shared data isolation, and confirm logout revokes access.",
-        "attempts": [
-          "Cloud Run migration execution tired-social-migrate-52lww confirmed schema version 4. Live user confirmed Google callback and profile display.",
-          "The user confirmed a second Google account was signed into TinyFish. The requested run did not start."
-        ]
-      }
+      "evidence": [
+        "docs/SESSION.md#production-google-sign-in",
+        "docs/AUTH.md#verification-and-remaining-gates"
+      ],
+      "workstream": "A"
     },
     {
       "id": "M03",
