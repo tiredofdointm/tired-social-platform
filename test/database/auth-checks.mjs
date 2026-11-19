@@ -78,6 +78,14 @@ export async function authChecks(t,pool){
    // Set expiry in the past after moving creation to preserve the schema constraint.
    await pool.query("UPDATE sessions SET expires_at=now()-interval '1 minute' WHERE token_hash=$1",[digest(session.split('=')[1])]);
    assert.equal((await me(session)).status,401);
+   const expiredSession=(await pool.query(
+    'SELECT id,user_id,created_at,expires_at,revoked_at FROM sessions WHERE token_hash=$1',[digest(session.split('=')[1])])).rows[0];
+   const activeSession=(await callback(await begin(),'alice'));
+   assert.equal((await me(cookieValue(activeSession,SESSION_COOKIE))).status,200);
+   const archived=(await pool.query(
+    'SELECT id,user_id,created_at,expires_at,revoked_at,token_hash FROM sessions WHERE id=$1',[expiredSession.id])).rows[0];
+   assert.deepEqual(archived,{...expiredSession,token_hash:null});
+   assert.equal((await me(session)).status,401);
   }finally{await new Promise(resolve=>server.close(resolve));}
  });
 }
