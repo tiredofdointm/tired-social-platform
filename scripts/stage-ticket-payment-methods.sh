@@ -37,5 +37,5 @@ stripe "${args[@]}" "https://api.stripe.com/v1/webhook_endpoints/$id" |
   jq -e '.livemode==false and (.enabled_events | index("checkout.session.async_payment_failed")!=null and index("checkout.session.async_payment_succeeded")!=null)' >/dev/null
 unset key
 
-gcloud run deploy "$project" --project="$project" --region="$region" --image="$image"   --update-env-vars="PUBLIC_ORIGIN=$origin" --tag=ticket-test --service-account="$sandbox_runtime" --no-traffic --remove-env-vars=STRIPE_LIVE_PLATFORM_ACCOUNT --remove-secrets=STRIPE_LIVE_BOOKING_KEY,STRIPE_LIVE_BOOKING_WEBHOOK --quiet
+gcloud run deploy "$project" --project="$project" --region="$region" --image="$image"   --update-env-vars="PUBLIC_ORIGIN=$origin" --tag=ticket-test --service-account="$sandbox_runtime" --no-traffic --remove-env-vars=STRIPE_LIVE_PLATFORM_ACCOUNT,STRIPE_LIVE_COLLECTIONS_ENABLED --remove-secrets=STRIPE_LIVE_BOOKING_KEY,STRIPE_LIVE_BOOKING_WEBHOOK --quiet
 curl -fsS "$origin/api/health" | jq -e 'select(.status=="ok")'

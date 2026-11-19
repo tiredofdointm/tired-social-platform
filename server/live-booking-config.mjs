@@ -12,6 +12,8 @@ export const liveRecords = Object.freeze({
 export async function liveBookingConfig(origin, env = process.env) {
   const key = env.STRIPE_LIVE_BOOKING_KEY;
   const signingSecret = env.STRIPE_LIVE_BOOKING_WEBHOOK;
+  const stage = env.STRIPE_LIVE_COLLECTIONS_ENABLED ?? '0';
+  if (!['0','1'].includes(stage) || (stage === '1' && !key)) throw Error('Invalid live collection setting');
   if (!key && !signingSecret) return null;
   if (origin !== 'https://tired.events' || !/^(sk|rk)_live_/.test(key ?? '') ||
       !signingSecret?.startsWith('whsec_') || !/^acct_[A-Za-z0-9]+$/.test(env.STRIPE_LIVE_PLATFORM_ACCOUNT ?? '') ||
@@ -24,6 +26,7 @@ export async function liveBookingConfig(origin, env = process.env) {
     throw Error('Live booking merchant verification failed');
   }
   return {
+    liveCollectionsEnabled: stage === '1',
     connect, ticketPayments: {live:true,sessions:connect.checkout.sessions,refunds:connect.refunds,accounts:connect.accounts}, records: liveRecords, bookingFeeBps: LIVE_BOOKING_FEE_BPS,
     verifyLiveBooking: (body, signature) => connect.webhooks.constructEvent(body, signature, signingSecret)
   };

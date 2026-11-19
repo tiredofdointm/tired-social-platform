@@ -8,7 +8,7 @@ export function sandboxBookingFee(connect, env=process.env){
   return Number(value);
 }
 
-export async function bookingRoutes({pool, actor, path, method, req, send, fail, readJson, fields, uuid, bookingFeeBps=null,connect,origin,records=sandboxRecords}) {
+export async function bookingRoutes({pool, actor, path, method, req, send, fail, readJson, fields, uuid, bookingFeeBps=null,collectionsEnabled,connect,origin,records=sandboxRecords}) {
   const environment=records.live||origin==='https://tired.events'?'live':'test';
   // An existing unpriced request can still be managed after the upgrade.
   // Amounts saved by older deployments were exclusively sandbox quotes.
@@ -27,7 +27,7 @@ export async function bookingRoutes({pool, actor, path, method, req, send, fail,
       JOIN profiles p ON p.user_id=CASE WHEN s.provider_id=$1 THEN s.customer_id ELSE s.provider_id END
       WHERE s.customer_id IS NOT NULL AND $1 IN (s.provider_id,s.customer_id)
       AND ${sameEnvironment('s','$3')} AND s.starts_at + interval '1 hour' > now() ORDER BY s.starts_at`, [actor,bookingFeeBps!==null,environment]);
-    send(200, {bookings:rows,quotesEnabled:bookingFeeBps!==null,liveBookings:records.live});
+    send(200, {bookings:rows,checkoutEnabled:Boolean(connect)&&bookingFeeBps!==null&&collectionsEnabled,quotesEnabled:bookingFeeBps!==null,liveBookings:records.live});
     return true;
   }
   const paymentRoute=/^\/api\/v1\/services\/bookings\/([^/]+)\/(checkout|refund|transfer|payout)$/.exec(path);
@@ -36,6 +36,7 @@ export async function bookingRoutes({pool, actor, path, method, req, send, fail,
     if(!uuid(id))fail(404,'not_found');
     if(method!==(['transfer','payout'].includes(action)?'GET':'POST'))fail(405,'method_not_allowed');
     if(!connect || bookingFeeBps===null)fail(503,'sandbox_booking_checkout_unavailable');
+    if(action==='checkout' && !collectionsEnabled)fail(503,'live_checkout_paused');
     const handler={checkout:bookingCheckout,refund:bookingRefund,transfer:bookingTransfer,payout:bookingPayout}[action];
     await handler({pool,connect,actor,id,origin,send,fail,records});
     return true;

@@ -39,7 +39,7 @@ for name in "$keyname" "$signing"; do
 done
 gcloud run jobs update tired-social-migrate "${flags[@]}" --image="$image"
 gcloud run jobs execute tired-social-migrate "${flags[@]}" --wait
-gcloud run deploy "$project" "${flags[@]}" --image="$image" --tag=ticket-test --service-account="$sandbox_runtime" --no-traffic --remove-env-vars=STRIPE_LIVE_PLATFORM_ACCOUNT --remove-secrets=STRIPE_LIVE_BOOKING_KEY,STRIPE_LIVE_BOOKING_WEBHOOK   --update-secrets="STRIPE_TEST_SECRET_KEY=$keyname:latest,STRIPE_TEST_WEBHOOK_SECRET=$signing:latest"
+gcloud run deploy "$project" "${flags[@]}" --image="$image" --tag=ticket-test --service-account="$sandbox_runtime" --no-traffic --remove-env-vars=STRIPE_LIVE_PLATFORM_ACCOUNT,STRIPE_LIVE_COLLECTIONS_ENABLED --remove-secrets=STRIPE_LIVE_BOOKING_KEY,STRIPE_LIVE_BOOKING_WEBHOOK   --update-secrets="STRIPE_TEST_SECRET_KEY=$keyname:latest,STRIPE_TEST_WEBHOOK_SECRET=$signing:latest"
 actual=$(gcloud run services describe "$project" "${flags[@]}" --format='json(status.traffic)' | jq -er '.status.traffic[]|select(.tag=="ticket-test")|.url')
 [[ "$route" == "$actual" ]]
 curl -fsS "$actual/api/health" | jq -e '.status=="ok"'

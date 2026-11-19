@@ -548,3 +548,7 @@ Temporary Cloud Run jobs executed under the actual production and test identitie
 ### Production Google sign-in
 
 On November 18 Pacific time the owner tested two Google accounts on the public site. Production logs for tired.events recorded Google callbacks at 02:17:42 UTC and 02:17:52 UTC on November 19. The protected account endpoint returned HTTP 200 after each callback. The first account signed out at 02:17:48 UTC and the endpoint then returned HTTP 401. A read-only database check for the same test window confirmed two sessions belonging to two distinct Google accounts, with one session revoked at the time of inspection. No account identifiers or credentials were collected. This verifies the A02 requirements for independent production sign-ins and server-side revocation on logout.
+
+### Seller onboarding before checkout
+
+On November 18 Pacific time the production credential matched the selected Tired Studios merchant, whose account can accept charges. A dedicated platform webhook was registered with five booking and ticket event types. Secret Manager holds its signing secret. Delivery was paused during setup. The database regression suite verified seller status, quotes and free event creation while paused, rejection of paid event creation, holds and both checkout routes, and the existing active-mode workflows. M02 still awaits the original automatic test payout. M03 and T03 require live seller onboarding and purchase activation.

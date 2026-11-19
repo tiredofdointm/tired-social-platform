@@ -107,6 +107,7 @@ export function SharedEvents({linkedId,create:request}:{linkedId:string|null;cre
   <h1>Shared events and plans</h1>
   <p className="post-text" role="status">{message}</p>
   {liveTickets&&<details className="panel"><summary>Organizer payouts</summary>
+   {!checkoutEnabled && <p>Payout setup is open. Paid ticket sales are paused.</p>}
    <p>{seller?.transfersEnabled&&seller.payoutsEnabled?'Your Stripe account can receive ticket sales.':seller?'Connect a payout account to sell tickets. Free events are available now.':'Payout account status is unavailable. Refresh the list to check again.'}</p>
    <button disabled={busy} onClick={()=>void action(async()=>{
     const {url}=await api<{url:string}>('events/connect','POST');
@@ -170,7 +171,7 @@ export function SharedEvents({linkedId,create:request}:{linkedId:string|null;cre
      }finally{setBusy(false);}
     }}>{event.ticket_state==='open'?(liveTickets?'Resume checkout':'Resume test checkout'):(liveTickets?'Open checkout':'Open test checkout')}</button>}
     {checkoutStatus?.id===event.id && <p role="status">{checkoutStatus.text}{checkoutStatus.url && <> <a href={checkoutStatus.url} target="_blank" rel="noopener noreferrer">Open Stripe in a new tab</a></>}</p>}
-    {event.upcoming && event.ticket_state!=='issued' && event.ticket_state!=='open' && <button aria-describedby={`event-title-${event.id}`} disabled={busy} onClick={()=>void action(
+    {event.upcoming && (checkoutEnabled || event.my_hold_until) && event.ticket_state!=='issued' && event.ticket_state!=='open' && <button aria-describedby={`event-title-${event.id}`} disabled={busy} onClick={()=>void action(
      ()=>api('events/'+event.id+'/ticket-hold',event.my_hold_until?'DELETE':'PUT'),
      event.my_hold_until?'Hold released.':liveTickets?'Ticket held.':'Test ticket held.'
     )}>{event.my_hold_until?'Release hold':liveTickets?'Hold one ticket':'Hold one test ticket'}</button>}
