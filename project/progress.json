@@ -400,6 +400,7 @@
       "acceptance": "Only live quotes can start live checkout. The buyer sees the 7.5% fee and full USD total. Provider onboarding, signed webhooks, refunds and transfer reconciliation use the selected merchant and matching mode.",
       "evidence": [
         "https://github.com/tiredofdointm/tired-social-platform/pull/29",
+        "docs/SESSION.md#seller-onboarding-before-checkout",
         "docs/SESSION.md#production-launch-verification",
         "docs/DEPLOYMENT.md#live-talent-bookings-and-ticket-sales"
       ],
@@ -418,6 +419,7 @@
       "evidence": [
         "docs/SESSION.md#production-launch-verification",
         "https://github.com/tiredofdointm/tired-social-platform/pull/30",
+        "docs/SESSION.md#seller-onboarding-before-checkout",
         "docs/SESSION.md#current-deployed-state"
       ],
       "workstream": "T"

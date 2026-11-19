@@ -18,7 +18,7 @@ type Publishing = {
 };
 type View =
   | {kind:'loading' | 'preview' | 'signed-out' | 'error'}
-  | {kind:'ready'; csrf:string; listings:DirectoryEntry[]; bookings:Booking[]; liveBookings:boolean;quotesEnabled:boolean; publishing:Publishing};
+  | {kind:'ready'; csrf:string; listings:DirectoryEntry[]; bookings:Booking[]; liveBookings:boolean;checkoutEnabled:boolean;quotesEnabled:boolean; publishing:Publishing};
 
 class DirectoryError extends Error {
   constructor(readonly status:number) { super('Could not load or save services.'); }
@@ -66,9 +66,9 @@ export function SharedServices({preview,onPreviewMode,create}:{
         const [directory, publishing, reservations] = await Promise.all([
           get<{listings:DirectoryEntry[]}>('services', signal),
           get<Publishing>('services/publishing', signal),
-          get<{bookings:Booking[];liveBookings:boolean;quotesEnabled:boolean}>('services/bookings', signal),
+          get<{bookings:Booking[];liveBookings:boolean;checkoutEnabled:boolean;quotesEnabled:boolean}>('services/bookings', signal),
         ]);
-        if (!signal.aborted) setView({kind:'ready', csrf:session.csrfToken, listings:directory.listings, bookings:reservations.bookings,liveBookings:reservations.liveBookings===true,quotesEnabled:reservations.quotesEnabled, publishing});
+        if (!signal.aborted) setView({kind:'ready', csrf:session.csrfToken, listings:directory.listings, bookings:reservations.bookings,liveBookings:reservations.liveBookings===true,checkoutEnabled:reservations.checkoutEnabled,quotesEnabled:reservations.quotesEnabled, publishing});
       } catch (error) {
         if (!signal.aborted) setView({kind:error instanceof DirectoryError && error.status === 401 ? 'signed-out' : 'error'});
       }
@@ -153,6 +153,7 @@ export function SharedServices({preview,onPreviewMode,create}:{
   return <LiveBookings.Provider value={view.liveBookings}><section className="shared-community provider-directory stack">
     <h1>Find talent</h1>
     <p role="status">{message}</p>
+    {view.liveBookings && !view.checkoutEnabled && <p>Payout setup is open. Paid booking checkout is paused.</p>}
     <ProviderConnect csrf={view.csrf}/>
     <details className="panel">
       <summary>List your service</summary>
@@ -199,7 +200,7 @@ export function SharedServices({preview,onPreviewMode,create}:{
           <dt>{view.liveBookings?'Platform fee (7.5%)':'Platform fee'}</dt><dd>{usd.format(booking.quote.feeCents/100)}</dd>
           <dt>Total quote</dt><dd>{usd.format(booking.quote.totalCents/100)}</dd>
         </dl>}
-        {booking.quote && <BookingCheckout booking={booking} csrf={view.csrf}/>}
+        {booking.quote && <BookingCheckout checkoutEnabled={view.checkoutEnabled} booking={booking} csrf={view.csrf}/>}
         {Date.parse(booking.starts_at)>Date.now() && <div className="actions">
           {booking.provider && !booking.confirmed && <form onSubmit={event=>{
             event.preventDefault();
@@ -287,7 +288,7 @@ function ProviderConnect({csrf}:{csrf:string}){
 }
 
 
-function BookingCheckout({booking,csrf}:{booking:Booking;csrf:string}){
+function BookingCheckout({booking,csrf,checkoutEnabled}:{booking:Booking;csrf:string;checkoutEnabled:boolean}){
  const live=useContext(LiveBookings);
  const [message,setMessage]=useState('');
  const [url,setUrl]=useState('');
@@ -300,7 +301,7 @@ function BookingCheckout({booking,csrf}:{booking:Booking;csrf:string}){
   {paymentState==='refunded'&&<p>{live?'Payment refunded.':'Sandbox payment refunded.'}</p>}
   {booking.provider && (paymentState==='paid'||paymentState==='refunded') &&
    <BookingSettlement requestId={booking.request_id} csrf={csrf} refundable={paymentState==='paid'}/>}
-  {!booking.provider && Date.parse(booking.starts_at)>Date.now() && (!paymentState||paymentState==='open') && <button disabled={busy} onClick={async()=>{
+  {checkoutEnabled && !booking.provider && Date.parse(booking.starts_at)>Date.now() && (!paymentState||paymentState==='open') && <button disabled={busy} onClick={async()=>{
    setBusy(true);
    setMessage('Contacting Stripe…');
    setUrl('');

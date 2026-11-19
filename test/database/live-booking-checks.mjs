@@ -33,9 +33,12 @@ export async function liveBookingChecks(t,pool) {
   const verifyLiveBooking=(raw,sig)=>stripe.webhooks.constructEvent(raw,sig,signatureKey);
   let live=true;
   const ticketPayments={live:true,accounts:connect.accounts,sessions:connect.checkout.sessions,refunds:connect.refunds};
-  const production=createSocialHandler({pool,config,connect,payments:null,ticketPayments,bookingFeeBps:LIVE_BOOKING_FEE_BPS,records:liveRecords,verifyLiveBooking});
+  let paused=false;
+  const liveOptions={pool,config,connect,payments:null,ticketPayments,bookingFeeBps:LIVE_BOOKING_FEE_BPS,records:liveRecords,verifyLiveBooking};
+  const production=createSocialHandler({...liveOptions,liveCollectionsEnabled:true});
+  const onboarding=createSocialHandler(liveOptions);
   const sandbox=createSocialHandler({pool,config:{origin:'https://sandbox.example.test'},connect,payments:{sessions:connect.checkout.sessions},bookingFeeBps:750});
-  const server=createServer({auth:createAuthHandler({config,pool,provider:{}}),social:(...args)=>(live?production:sandbox)(...args)});
+  const server=createServer({auth:createAuthHandler({config,pool,provider:{}}),social:(...args)=>(live?(paused?onboarding:production):sandbox)(...args)});
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   const base='http://127.0.0.1:'+server.address().port+'/api/v1/';
   async function api(account,path,method='GET',body) {
@@ -61,6 +64,21 @@ export async function liveBookingChecks(t,pool) {
    assert.equal((await api(provider,path+'/confirm','POST',{servicePriceCents:10000})).status,200);
    const list=(await api(customer,'services/bookings')).data;
    assert.equal(list.liveBookings,true);
+   paused=true;
+   assert.deepEqual((await api(customer,'payments/status')).data,{mode:'live',sellerOnboarding:true,checkoutEnabled:false});
+   assert.equal((await api(customer,'services/bookings')).data.checkoutEnabled,false);
+   assert.equal((await api(customer,path+'/checkout','POST')).data.error.code,'live_checkout_paused');
+   assert.equal((await api(provider,'events/connect')).data.transfersEnabled,true);
+   assert.equal((await api(provider,'services/connect')).status,200);
+   assert.equal((await api(customer,'events')).data.checkoutEnabled,false);
+   const event={title:'Onboarding fixture',venue:'Room',startsAt:new Date(Date.now()+86400000).toISOString(),capacity:1};
+   assert.equal((await api(provider,'events','POST',{...event,ticketPriceCents:10000})).data.error.code,'live_checkout_paused');
+   assert.equal((await api(provider,'events','POST',event)).status,201);
+   for(const [action,method] of [['ticket-hold','PUT'],['checkout','POST']]){
+    assert.equal((await api(customer,'events/'+slot.id+'/'+action,method)).data.error.code,'live_checkout_paused');
+   }
+   assert.equal(await webhook('tired.delivery_check',{}),200);
+   paused=false;
    assert.deepEqual(list.bookings[0].quote,{serviceCents:10000,feeCents:750,totalCents:10750});
    live=false;
    assert.equal((await api(customer,'services/bookings')).data.bookings.length,0);

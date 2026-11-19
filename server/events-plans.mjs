@@ -6,8 +6,9 @@ const visibleOwner = (owner) => `EXISTS (SELECT 1 FROM users u WHERE u.id=${owne
  AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.blocker_id=$1 AND b.blocked_id=${owner})
  OR (b.blocker_id=${owner} AND b.blocked_id=$1))`;
 
-export async function eventsPlans({pool,payments,origin,actor,path,method,req,send,fail,readJson,fields,text,uuid,linkedEvent}) {
- const checkoutEnabled=Boolean(payments);
+export async function eventsPlans({pool,collectionsEnabled,payments,origin,actor,path,method,req,send,fail,readJson,fields,text,uuid,linkedEvent}) {
+ const canManageTickets=Boolean(payments);
+ const checkoutEnabled=canManageTickets && collectionsEnabled;
  const live=payments?.live===true;
  if (path==='/api/v1/events/publishing' && method==='GET') {
   const {rows:[policy]}=await pool.query(`SELECT manual_review,
@@ -16,7 +17,7 @@ export async function eventsPlans({pool,payments,origin,actor,path,method,req,se
   const {rows}=await pool.query(`SELECT id,title,venue,starts_at,publication FROM events
    WHERE publication<>'published' AND (owner_id=$1 OR $2 AND publication='pending')
    AND (($3 AND live_ticket=$4) OR ticket_price_cents IS NULL)
-   ORDER BY starts_at,id LIMIT 100`,[actor,policy.admin,checkoutEnabled,live]);
+   ORDER BY starts_at,id LIMIT 100`,[actor,policy.admin,canManageTickets,live]);
   return send(200,{...policy,submissions:rows});
  }
  if (path==='/api/v1/events/publishing' && method==='PUT') {
@@ -37,7 +38,7 @@ export async function eventsPlans({pool,payments,origin,actor,path,method,req,se
   const result=await pool.query(`UPDATE events SET publication=$3, reviewed_by=$1, reviewed_at=now()
    WHERE id=$2 AND publication='pending' AND (($4 AND live_ticket=$5) OR ticket_price_cents IS NULL)
    AND EXISTS(SELECT 1 FROM publishing_admins WHERE user_id=$1)
-   RETURNING publication`,[actor,review[1],body.decision,checkoutEnabled,live]);
+   RETURNING publication`,[actor,review[1],body.decision,body.decision==='published'?checkoutEnabled:canManageTickets,live]);
   if(!result.rowCount)fail(404,'not_found');
   return send(200,result.rows[0]);
  }
@@ -65,7 +66,7 @@ export async function eventsPlans({pool,payments,origin,actor,path,method,req,se
    FROM events e WHERE (e.starts_at>now() OR (e.ticket_price_cents IS NOT NULL AND e.starts_at>now()-interval '24 hours'
    AND (e.owner_id=$1 OR EXISTS (SELECT 1 FROM event_check_in_staff s WHERE s.event_id=e.id AND s.user_id=$1) OR EXISTS (SELECT 1 FROM ticket_orders o WHERE o.event_id=e.id AND o.buyer_id=$1 AND o.state='issued'))))
    AND e.publication='published' AND (($2 AND e.live_ticket=$4) OR e.ticket_price_cents IS NULL) AND ${visibleOwner('e.owner_id')}
-   ORDER BY CASE WHEN e.id=$3::uuid THEN 0 ELSE 1 END,e.starts_at,e.id LIMIT 100`,[actor,checkoutEnabled,linkedEvent??null,live]);
+   ORDER BY CASE WHEN e.id=$3::uuid THEN 0 ELSE 1 END,e.starts_at,e.id LIMIT 100`,[actor,canManageTickets,linkedEvent??null,live]);
   return send(200,{events:rows.map(event=>({...event,ticketQuote:event.ticket_price_cents==null?null:ticketQuote(event.ticket_price_cents,live)})),checkoutEnabled,liveTickets:live});
  }
  if (path === '/api/v1/plans' && method === 'GET') {
@@ -89,7 +90,7 @@ export async function eventsPlans({pool,payments,origin,actor,path,method,req,se
    if (!Number.isInteger(body.capacity)||body.capacity<1||body.capacity>10000) fail(400,'invalid_capacity');
    if (body.ticketPriceCents != null && (!Number.isInteger(body.ticketPriceCents) ||
        body.ticketPriceCents<50 || body.ticketPriceCents>99999999)) fail(400,'invalid_ticket_price');
-   if(body.ticketPriceCents != null && !checkoutEnabled)fail(503,'sandbox_checkout_unavailable');
+   if(body.ticketPriceCents != null && !checkoutEnabled)fail(503,live?'live_checkout_paused':'sandbox_checkout_unavailable');
    if(live && body.ticketPriceCents!=null){
     if(ticketQuote(body.ticketPriceCents,true).totalCents>99999999)fail(400,'ticket_total_too_high');
     await ticketDestination(pool,payments,actor,fail);
@@ -106,7 +107,8 @@ export async function eventsPlans({pool,payments,origin,actor,path,method,req,se
  const match=/^\/api\/v1\/(events|plans)\/([^/]+)\/(rsvp|ticket-hold|checkout|guest-list|check-in|staff|refund|invite|membership)$/.exec(path);
  if (!match || !uuid(match[2])) fail(404,'not_found');
  const [,resource,id,action]=match;
- if(resource==='events' && ['checkout','ticket-hold','guest-list','check-in','staff','refund'].includes(action) && !checkoutEnabled)fail(503,'sandbox_checkout_unavailable');
+ if(resource==='events' && ['checkout','ticket-hold','guest-list','check-in','staff','refund'].includes(action) && !canManageTickets)fail(503,'sandbox_checkout_unavailable');
+ if(resource==='events' && !collectionsEnabled && (action==='checkout' || (action==='ticket-hold' && method==='PUT')))fail(503,'live_checkout_paused');
  if(resource==='events' && ((action==='staff'&&['GET','PUT','DELETE'].includes(method))||(action==='guest-list' && method==='GET')||(['check-in','refund'].includes(action) && method==='POST'))){
   return organizerTickets({pool,payments,id,actor,action,req,send,fail,readJson,fields,uuid});
  }

@@ -24,17 +24,24 @@ async function readJson(req){
  });
  try{return JSON.parse(Buffer.concat(chunks).toString('utf8'));}catch{fail(400,'invalid_json');}
 }
-export function createSocialHandler({config,pool,payments=testPayments(),ticketPayments=payments,connect=testConnect(),bookingFeeBps=sandboxBookingFee(connect),records=sandboxRecords,verifyLiveBooking=null}){
+export function createSocialHandler({config,pool,payments=testPayments(),ticketPayments=payments,connect=testConnect(),bookingFeeBps=sandboxBookingFee(connect),records=sandboxRecords,verifyLiveBooking=null,liveCollectionsEnabled=false}){
+ const collectionsEnabled=!records.live || liveCollectionsEnabled===true;
  const sessions=authRepository(pool),repo=socialRepository(pool);
  let windowStart=Date.now(),writes=0;
  return async(req,res,url)=>{
   const path=url.pathname;
   const liveWebhook=path==='/api/v1/booking-webhook';
   const webhook=liveWebhook||path==='/api/v1/ticket-webhook';
-  if(!webhook && !/^\/api\/v1\/(feed|posts|profiles|follows|blocks|events|plans|services)(\/|$)/.test(path) && path!=='/api/v1/me/profile' && path!=='/api/v1/me/follow-requests')return false;
+  const paymentStatus=path==='/api/v1/payments/status';
+  if(!paymentStatus && !webhook && !/^\/api\/v1\/(feed|posts|profiles|follows|blocks|events|plans|services)(\/|$)/.test(path) && path!=='/api/v1/me/profile' && path!=='/api/v1/me/follow-requests')return false;
   const requestId=randomUUID();res.setHeader('Cache-Control','no-store');res.setHeader('X-Request-ID',requestId);
   function send(status,data){res.writeHead(status,{'Content-Type':'application/json'});res.end(JSON.stringify(data));}
   try{
+   if(paymentStatus){
+    if(req.method!=='GET')fail(405,'method_not_allowed');
+    send(200,{mode:records.live?'live':ticketPayments||connect?'test':'off',sellerOnboarding:Boolean(connect),checkoutEnabled:Boolean(ticketPayments)&&collectionsEnabled});
+    return true;
+   }
    if(webhook){await ticketWebhook({req,pool,payments,fail,liveWebhook,verifyLiveBooking});send(200,{received:true});return true;}
    const token=sessionTokenFrom(req),user=await sessions.session(token);
    if(!user)fail(401,'authentication_required');
@@ -50,7 +57,7 @@ export function createSocialHandler({config,pool,payments=testPayments(),ticketP
      await providerConnect({pool,connect,actor,method,origin:config.origin,send,fail,records,organizer:true});
      return true;
     }
-    await eventsPlans({pool,payments:ticketPayments,origin:config.origin,actor,path,method,req,send,fail,readJson,fields,text,uuid,linkedEvent:url.searchParams.get('event')});
+    await eventsPlans({pool,collectionsEnabled,payments:ticketPayments,origin:config.origin,actor,path,method,req,send,fail,readJson,fields,text,uuid,linkedEvent:url.searchParams.get('event')});
     return true;
    }
    if(path==='/api/v1/services/connect/payouts'){
@@ -62,7 +69,7 @@ export function createSocialHandler({config,pool,payments=testPayments(),ticketP
     return true;
    }
    if(/^\/api\/v1\/services(\/|$)/.test(path)){
-    await services({pool,actor,path,method,req,send,fail,readJson,fields,text,uuid,bookingFeeBps,connect,records,origin:config.origin});
+    await services({pool,collectionsEnabled,actor,path,method,req,send,fail,readJson,fields,text,uuid,bookingFeeBps,connect,records,origin:config.origin});
     return true;
    }
    let match;

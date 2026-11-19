@@ -26,7 +26,7 @@ fi
 
 gcloud run jobs update tired-social-migrate "${flags[@]}" --image="$image"
 gcloud run jobs execute tired-social-migrate "${flags[@]}" --wait
-gcloud run deploy "$service" "${flags[@]}" --image="$image" --tag=ticket-test --service-account="$sandbox_runtime" --no-traffic --remove-env-vars=STRIPE_LIVE_PLATFORM_ACCOUNT --remove-secrets=STRIPE_LIVE_BOOKING_KEY,STRIPE_LIVE_BOOKING_WEBHOOK --quiet \
+gcloud run deploy "$service" "${flags[@]}" --image="$image" --tag=ticket-test --service-account="$sandbox_runtime" --no-traffic --remove-env-vars=STRIPE_LIVE_PLATFORM_ACCOUNT,STRIPE_LIVE_COLLECTIONS_ENABLED --remove-secrets=STRIPE_LIVE_BOOKING_KEY,STRIPE_LIVE_BOOKING_WEBHOOK --quiet \
   --update-env-vars="PUBLIC_ORIGIN=$origin,STRIPE_CONNECT_TEST_ENABLED=1,STRIPE_BOOKING_TEST_FEE_BPS=750" \
   --update-secrets="STRIPE_TEST_SECRET_KEY=tired-stripe-test-key:latest,STRIPE_TEST_WEBHOOK_SECRET=tired-stripe-ticket-test-webhook:latest"
 

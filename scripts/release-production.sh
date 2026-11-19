@@ -39,7 +39,14 @@ booking_config=$(gcloud run revisions describe "$previous" "${flags[@]}" --forma
 platform=$(jq -r '.[] | select(.name=="STRIPE_LIVE_PLATFORM_ACCOUNT") | .value' <<<"$booking_config")
 key_version=$(jq -r '.[] | select(.name=="STRIPE_LIVE_BOOKING_KEY") | .valueFrom.secretKeyRef.key' <<<"$booking_config")
 webhook_version=$(jq -r '.[] | select(.name=="STRIPE_LIVE_BOOKING_WEBHOOK") | .valueFrom.secretKeyRef.key' <<<"$booking_config")
-if [[ ${ACTIVATE_LIVE_BOOKINGS:-0} == 1 ]]; then
+collections=$(jq -r '.[] | select(.name=="STRIPE_LIVE_COLLECTIONS_ENABLED") | .value' <<<"$booking_config")
+case "${PREPARE_LIVE_BOOKINGS:-0}/${ACTIVATE_LIVE_BOOKINGS:-0}" in
+  0/0) ;;
+  1/0) collections=0 ;;
+  0/1) collections=1 ;;
+  *) echo 'Select at most one live payment stage.' >&2; exit 2 ;;
+esac
+if [[ ${PREPARE_LIVE_BOOKINGS:-0} == 1 || ${ACTIVATE_LIVE_BOOKINGS:-0} == 1 ]]; then
   platform=${LIVE_PLATFORM_ACCOUNT:?Set the verified Tired Studios Stripe account ID}
   key_version=${LIVE_KEY_VERSION:?Supply the verified server key version}
   webhook_version=${LIVE_WEBHOOK_VERSION:?Supply the signing secret version}
@@ -50,10 +57,12 @@ secret_remove=STRIPE_TEST_SECRET_KEY,STRIPE_TEST_WEBHOOK_SECRET
 secret_update=()
 if [[ -n "$platform$key_version$webhook_version" || "$booking_config" != '[]' ]]; then
   [[ "$platform" =~ ^acct_[A-Za-z0-9]+$ && "$key_version" =~ ^[1-9][0-9]*$ && "$webhook_version" =~ ^[1-9][0-9]*$ ]]
-  env_update+=",STRIPE_LIVE_PLATFORM_ACCOUNT=$platform"
+  collections=${collections:-0}
+  [[ "$collections" =~ ^[01]$ ]]
+  env_update+=",STRIPE_LIVE_PLATFORM_ACCOUNT=$platform,STRIPE_LIVE_COLLECTIONS_ENABLED=$collections"
   secret_update=(--update-secrets="STRIPE_LIVE_BOOKING_KEY=tired-stripe-live-booking-key:$key_version,STRIPE_LIVE_BOOKING_WEBHOOK=tired-stripe-live-booking-webhook:$webhook_version")
 else
-  env_remove+=,STRIPE_LIVE_PLATFORM_ACCOUNT
+  env_remove+=,STRIPE_LIVE_PLATFORM_ACCOUNT,STRIPE_LIVE_COLLECTIONS_ENABLED
   secret_remove+=,STRIPE_LIVE_BOOKING_KEY,STRIPE_LIVE_BOOKING_WEBHOOK
 fi
 
@@ -75,6 +84,11 @@ curl -fsS --max-time 15 "$preview/api/health" |
   jq -e --arg revision "$candidate" '.status=="ok" and .revision==$revision' >/dev/null
 curl -sS --max-time 15 -X POST -d '{}' "$preview/api/v1/ticket-webhook" |
   jq -e '.error.code=="sandbox_checkout_unavailable"' >/dev/null
+payment_status() {
+  [[ -z "$platform" ]] || curl -fsS --max-time 15 "$1/api/v1/payments/status" |
+    jq -e --arg enabled "$collections" '.mode=="live" and .sellerOnboarding==true and .checkoutEnabled==($enabled=="1")' >/dev/null
+}
+payment_status "$preview"
 if [[ -n "$platform" ]]; then
   curl -sS --max-time 15 -X POST -d '{}' "$preview/api/v1/booking-webhook" |
     jq -e '.error.code=="invalid_signature"' >/dev/null
@@ -89,7 +103,7 @@ fi
 gcloud run services update-traffic "$service" "${flags[@]}" --to-revisions="$candidate=100"
 
 for attempt in {1..5}; do
-  if smoke "$candidate"; then
+  if smoke "$candidate" && payment_status "$origin"; then
     echo "Production verified on $candidate. Rollback revision is $previous."
     exit 0
   fi
