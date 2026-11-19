@@ -532,7 +532,6 @@ export async function socialHttpChecks(t,pool){
    const plan=await request(alice,'plans','POST',{title:'Private meetup',details:'Private address',startsAt});
    assert.equal(plan.status,201);
    const planPath='plans/'+plan.data.id;
-   const bobProfile=(await request(bob,'me')).data.user;
    assert.deepEqual((await request(bob,'plans')).data.plans,[]);
    assert.equal((await request(bob,planPath+'/membership','PUT')).status,404);
    assert.equal((await request(bob,planPath+'/invite','PUT',{handle:'social_alice'})).status,404);
