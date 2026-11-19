@@ -6,7 +6,7 @@ No DNS, certificate, email, Worker, billing, or IAM changes were made during thi
 
 ## Current web routing and recovery
 
-The apex is DNS-only. Its four A records are `216.239.32.21`, `216.239.34.21`, `216.239.36.21` and `216.239.38.21`. The corresponding AAAA records are `2001:4860:4802:32::15`, `2001:4860:4802:34::15`, `2001:4860:4802:36::15` and `2001:4860:4802:38::15`. Compare these with the current Cloud Run domain mapping before restoring a changed record. Each IPv4 address independently served healthy production content with a valid certificate when tested using the production hostname.
+The apex is DNS-only. Its four A records are `216.239.32.21`, `216.239.34.21`, `216.239.36.21` and `216.239.38.21`. The corresponding AAAA records are `2001:4860:4802:32::15`, `2001:4860:4802:34::15`, `2001:4860:4802:36::15` and `2001:4860:4802:38::15`. Compare these with the current Cloud Run domain mapping before restoring a changed record. Each of the eight IPv4 and IPv6 addresses served the expected revision with a valid certificate for the production hostname. A private DNS rehearsal restored the saved answers after a missing apex record.
 
 The www A record is proxied, points to `192.0.2.1` and uses automatic TTL. The Cloudflare Single Redirect named **Redirect www to tired.events** matches `http.host eq "www.tired.events"`. It returns 301 to `concat("https://tired.events", http.request.uri.path)` with query preservation enabled. This redirect runs at the edge. Both observed edge IPv4 addresses passed the path and query test.
 
