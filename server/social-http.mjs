@@ -24,7 +24,7 @@ async function readJson(req){
  });
  try{return JSON.parse(Buffer.concat(chunks).toString('utf8'));}catch{fail(400,'invalid_json');}
 }
-export function createSocialHandler({config,pool,payments=testPayments(),connect=testConnect(),bookingFeeBps=sandboxBookingFee(connect),records=sandboxRecords,verifyLiveBooking=null}){
+export function createSocialHandler({config,pool,payments=testPayments(),ticketPayments=payments,connect=testConnect(),bookingFeeBps=sandboxBookingFee(connect),records=sandboxRecords,verifyLiveBooking=null}){
  const sessions=authRepository(pool),repo=socialRepository(pool);
  let windowStart=Date.now(),writes=0;
  return async(req,res,url)=>{
@@ -45,7 +45,12 @@ export function createSocialHandler({config,pool,payments=testPayments(),connect
     if(Date.now()-windowStart>=60000){windowStart=Date.now();writes=0;}if(++writes>300)fail(429,'rate_limited');
    }
    if(/^\/api\/v1\/(events|plans)(\/|$)/.test(path)){
-    await eventsPlans({pool,payments,origin:config.origin,actor,path,method,req,send,fail,readJson,fields,text,uuid,linkedEvent:url.searchParams.get('event')});
+    if(path==='/api/v1/events/connect'){
+     if(!ticketPayments?.live)fail(503,'live_tickets_unavailable');
+     await providerConnect({pool,connect,actor,method,origin:config.origin,send,fail,records,organizer:true});
+     return true;
+    }
+    await eventsPlans({pool,payments:ticketPayments,origin:config.origin,actor,path,method,req,send,fail,readJson,fields,text,uuid,linkedEvent:url.searchParams.get('event')});
     return true;
    }
    if(path==='/api/v1/services/connect/payouts'){

@@ -6,7 +6,7 @@ import {createSocialHandler} from '../../server/social-http.mjs';
 import {liveRecords,LIVE_BOOKING_FEE_BPS} from '../../server/live-booking-config.mjs';
 
 export async function liveBookingChecks(t,pool) {
- await t.test('live booking fees and settlement stay isolated from sandbox records',async()=>{
+ await t.test('live booking fees and settlement stay isolated from sandbox records',async scenario=>{
   const config={origin:'https://tired.events'};
   const users=authRepository(pool);
   const customer=await users.signIn({issuer:'live-mode-fixture',subject:'buyer',name:'Booking buyer'});
@@ -32,8 +32,9 @@ export async function liveBookingChecks(t,pool) {
   };
   const verifyLiveBooking=(raw,sig)=>stripe.webhooks.constructEvent(raw,sig,signatureKey);
   let live=true;
-  const production=createSocialHandler({pool,config,connect,payments:null,bookingFeeBps:LIVE_BOOKING_FEE_BPS,records:liveRecords,verifyLiveBooking});
-  const sandbox=createSocialHandler({pool,config:{origin:'https://sandbox.example.test'},connect,payments:null,bookingFeeBps:750});
+  const ticketPayments={live:true,accounts:connect.accounts,sessions:connect.checkout.sessions,refunds:connect.refunds};
+  const production=createSocialHandler({pool,config,connect,payments:null,ticketPayments,bookingFeeBps:LIVE_BOOKING_FEE_BPS,records:liveRecords,verifyLiveBooking});
+  const sandbox=createSocialHandler({pool,config:{origin:'https://sandbox.example.test'},connect,payments:{sessions:connect.checkout.sessions},bookingFeeBps:750});
   const server=createServer({auth:createAuthHandler({config,pool,provider:{}}),social:(...args)=>(live?production:sandbox)(...args)});
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   const base='http://127.0.0.1:'+server.address().port+'/api/v1/';
@@ -80,6 +81,40 @@ export async function liveBookingChecks(t,pool) {
    assert.equal(await webhook('charge.refunded',refunded),200);
    assert.equal((await api(customer,'services/bookings')).data.bookings[0].payment_state,'refunded');
    assert.equal((await pool.query('SELECT 1 FROM booking_payments WHERE request_id=$1',[booking.request_id])).rowCount,0);
+   await scenario.test('ticket fees, organizer payments, reserved inventory and refunds use the correct environment',async()=>{
+    const draft={title:'Ticket fixture',venue:'Room A',startsAt:new Date(Date.now()+48*3600000).toISOString(),capacity:1,ticketPriceCents:10000};
+    assert.equal((await api(customer,'events','POST',draft)).status,409);
+    assert.equal((await api(provider,'events/connect')).data.transfersEnabled,true);
+    const created=await api(provider,'events','POST',draft);
+    assert.equal(created.status,201);
+    const eid=created.data.id;
+    // Simulate publication if the previous scenario enabled manual review.
+    await pool.query("UPDATE events SET publication='published' WHERE id=$1",[eid]);
+    const path='events/'+eid;
+    assert.deepEqual((await api(customer,'events?event='+eid)).data.events[0].ticketQuote,{ticketCents:10000,feeCents:750,totalCents:10750});
+    assert.equal((await api(customer,path+'/ticket-hold','PUT')).status,200);
+    assert.equal((await api(provider,path+'/ticket-hold','PUT')).status,409);
+    live=false;
+    assert.ok(!(await api(customer,'events?event='+eid)).data.events.some(event=>event.id===eid));
+    assert.equal((await api(customer,path+'/checkout','POST')).status,404);
+    assert.equal((await api(customer,path+'/ticket-hold','DELETE')).status,404);
+    assert.equal((await api(provider,path+'/guest-list')).status,404);
+    live=true;
+    assert.equal((await api(customer,path+'/checkout','POST')).status,200);
+    const order=metadata.tired_ticket_order;
+    assert.ok(order);
+    const paid={id:'cs_liveFixture',mode:'payment',payment_status:'paid',currency:'usd',amount_total:10750,payment_intent:paymentIntent,metadata};
+    assert.equal(await webhook('checkout.session.completed',{...paid,amount_total:10000}),409);
+    assert.equal(await webhook('checkout.session.completed',paid),200);
+    assert.equal(await webhook('checkout.session.completed',paid),200);
+    const guestList=await api(provider,path+'/guest-list');
+    assert.equal(guestList.data.totals.issued,1);
+    assert.equal(guestList.data.totals.net_cents,'10750');
+    assert.equal((await api(customer,path+'/refund','POST',{orderId:order})).status,404);
+    assert.equal((await api(provider,path+'/refund','POST',{orderId:order})).status,200);
+    assert.equal(await webhook('charge.refunded',{id:'ch_ticket',currency:'usd',amount:10750,amount_refunded:10750,payment_intent:paymentIntent,metadata}),200);
+    assert.equal((await api(customer,'events?event='+eid)).data.events[0].ticket_state,'refunded');
+   });
   } finally {await new Promise(resolve=>server.close(resolve));}
  });
 }

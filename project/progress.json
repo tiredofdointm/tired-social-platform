@@ -406,8 +406,26 @@
         "M02"
       ],
       "acceptance": "Only live quotes can start live checkout. The buyer sees the 7.5% fee and full USD total. Provider onboarding, signed webhooks, refunds and transfer reconciliation use the selected merchant and matching mode.",
-      "evidence": [],
+      "evidence": [
+        "https://github.com/tiredofdointm/tired-social-platform/pull/29",
+        "docs/SESSION.md#production-launch-verification"
+      ],
       "workstream": "M"
+    },
+    {
+      "id": "T03",
+      "title": "Enable paid event tickets with Tired Studios",
+      "status": "backlog",
+      "priority": 1,
+      "dependsOn": [
+        "T02",
+        "M02"
+      ],
+      "acceptance": "Organizers complete live onboarding and receive the face value. Buyers see the 7.5% fee before checkout. Verify ticket issuance, refunds and transfer reconciliation on the correct merchant.",
+      "evidence": [
+        "docs/SESSION.md#production-launch-verification"
+      ],
+      "workstream": "T"
     }
   ]
 }

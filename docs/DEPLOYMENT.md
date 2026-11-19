@@ -45,9 +45,9 @@ From a clean checkout pinned to the reviewed commit, run `bash scripts/verify-sa
 
 The diagnostic selects the single unrefunded $107.50 test booking with a $100 provider transfer from the past seven days. To select an older or ambiguous transfer, supply its Stripe transfer ID as the script's argument. To refresh only the payout report, run `bash scripts/inspect-sandbox-payout-readiness.sh`. A booking match requires its destination payment in a paid automatic payout and agreement between that payout's amount and its funding entries. A pending balance alone leaves the booking unverified.
 
-## Live talent bookings
+## Live talent bookings and ticket sales
 
-Tired Studios is the merchant. The customer sees the provider service amount, a 7.5% platform fee rounded to the nearest cent, and the total in USD before checkout. Stripe transfers the full service amount to the provider's connected account. The platform bears Stripe processing costs. Ticket checkout continues to use its separate sandbox integration.
+Tired Studios is the merchant. The customer sees the provider service amount, a 7.5% platform fee rounded to the nearest cent, and the total in USD before checkout. Stripe transfers the full service amount to the provider's connected account. The platform bears Stripe processing costs. Apply migration 017 before activating paid events. Live tickets use the same merchant and signed platform webhook. The ticket buyer pays the face value plus 7.5%, and the organizer receives the face value. An organizer must complete Stripe onboarding and have active transfers and payouts before publishing a priced event. Existing priced events and orders belong to test mode.
 
 Migration 016 adds dedicated live provider accounts and booking payments and identifies the environment of a booking request. Existing priced quotes belong to the sandbox. Apply the migration before staging the release. For initial activation, store the Tired Studios server key and its webhook signing secret in Google Secret Manager as `tired-stripe-live-booking-key` and `tired-stripe-live-booking-webhook`. Give the runtime service account accessor permission on those secrets. Pass numeric version references to the release. Startup verifies the merchant account ID, charge capability, production origin and key mode before it accepts traffic.
 
