@@ -23,8 +23,10 @@ export async function providerConnect({pool,connect,actor,method,origin,send,fai
   if(!accountId && method==='POST'){
    const account=await connect.accounts.create({country:'US',
     controller:{fees:{payer:'application'},losses:{payments:'application'},requirement_collection:'stripe',stripe_dashboard:{type:'express'}},
-    capabilities:{transfers:{requested:true}}
-   },{idempotencyKey:(records.live?'live-provider-':'sandbox-provider-')+actor});
+    capabilities:records.live
+     ? {card_payments:{requested:true},transfers:{requested:true}}
+     : {transfers:{requested:true}}
+   },{idempotencyKey:(records.live?'live-provider-card-transfers-':'sandbox-provider-')+actor});
    accountId=account.id;
    await db.query(`INSERT INTO ${records.accounts}(provider_id,stripe_account_id) VALUES($1,$2)`,[actor,accountId]);
   }

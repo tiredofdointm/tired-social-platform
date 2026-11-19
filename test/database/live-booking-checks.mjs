@@ -15,8 +15,13 @@ export async function liveBookingChecks(t,pool) {
   const stripe=new Stripe('sk_test_local_fixture');
   const destination='acct_LiveFixture';
   let metadata, paymentIntent;
+  let accountCreations=0;
   const connect={
-   accounts:{retrieve:async id=>{assert.equal(id,destination);return {capabilities:{transfers:'active'},payouts_enabled:true};}},
+   accountLinks:{create:async()=>({url:"https://connect.stripe.com/setup/fixture"})},
+   accounts:{create:async input=>{
+    assert.deepEqual(input.capabilities,{card_payments:{requested:true},transfers:{requested:true}});
+    accountCreations++;return {id:destination};
+   },retrieve:async id=>{assert.equal(id,destination);return {capabilities:{transfers:'active'},payouts_enabled:true};}},
    checkout:{sessions:{create:async options=>{
     assert.deepEqual(options.line_items.map(item=>item.price_data.unit_amount),[10000,750]);
     assert.deepEqual(options.payment_intent_data.transfer_data,{destination,amount:10000});
@@ -56,7 +61,13 @@ export async function liveBookingChecks(t,pool) {
    for(const account of [customer,provider])account.csrf=(await api(account,'me')).data.csrfToken;
    const listing=(await pool.query("INSERT INTO service_listings(owner_id,title,category,description,publication) VALUES($1,'Paid shoot','Photography','One hour','published') RETURNING id",[provider.userId])).rows[0];
    const slot=(await pool.query("INSERT INTO service_slots(listing_id,provider_id,starts_at) VALUES($1,$2,date_trunc('hour',now())+interval '8 days') RETURNING id",[listing.id,provider.userId])).rows[0];
-   await pool.query('INSERT INTO live_provider_connect_accounts(provider_id,stripe_account_id) VALUES($1,$2)',[provider.userId,destination]);
+   paused=true;
+   for(let attempt=0;attempt<2;attempt++){
+    const setup=await api(provider,'events/connect','POST');
+    assert.equal(setup.data.url,'https://connect.stripe.com/setup/fixture');
+   }
+   assert.equal(accountCreations,1);
+   paused=false;
    await pool.query("INSERT INTO provider_connect_accounts(provider_id,stripe_account_id) VALUES($1,'acct_SandboxFixture')",[provider.userId]);
    const booking=(await api(customer,'services/slots/'+slot.id+'/request','POST')).data;
    assert.ok(booking.request_id);
