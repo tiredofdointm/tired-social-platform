@@ -552,3 +552,9 @@ On November 18 Pacific time the owner tested two Google accounts on the public s
 ### Seller onboarding before checkout
 
 On November 18 Pacific time the production credential matched the selected Tired Studios merchant, whose account can accept charges. A dedicated platform webhook was registered with five booking and ticket event types. Secret Manager holds its signing secret. Delivery was paused during setup. The database regression suite verified seller status, quotes and free event creation while paused, rejection of paid event creation, holds and both checkout routes, and the existing active-mode workflows. M02 still awaits the original automatic test payout. M03 and T03 require live seller onboarding and purchase activation.
+
+On November 18 the reviewed onboarding release passed all six GitHub checks. Cloud Build deployed commit 9d12018081fb4ea0d250a43ad35f05a9bfd3f967 to private staging. The same image passed the separate test-revision checks and was promoted to production revision 00076-gon, with rollback to 00073-nuw. The public payment status showed seller onboarding enabled and checkout paused. The production endpoint accepted an inert locally signed diagnostic and rejected an unsigned request. Stripe confirmed delivery was enabled for all five configured event types. The diagnostic did not create a payment. Live seller verification and the automatic sandbox payout remain outstanding.
+
+### Expired session maintenance
+
+Migration 019 permits retiring the stored hash for an expired session. Each sign-in start processes an indexed batch of up to 100, skips rows being processed concurrently and retains the original session and identity audit fields. Existing releases continue to reject expired credentials. The database regression check covers expiration, audit preservation and concurrent use of active sessions.

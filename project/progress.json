@@ -347,6 +347,7 @@
       ],
       "acceptance": "Recovery, monitoring, security, accessibility and rollback verified before domain launch.",
       "evidence": [
+        "docs/SESSION.md#expired-session-maintenance",
         "docs/SESSION.md#production-launch-verification",
         "https://github.com/tiredofdointm/tired-social-platform/pull/25",
         "https://github.com/tiredofdointm/tired-social-platform/pull/26",

@@ -77,6 +77,11 @@ export function authRepository(pool) {
   async begin({state,browser,nonce,verifier,page}) {
    await transaction(pool,async db=>{
     await db.query('DELETE FROM oauth_login_attempts WHERE expires_at<=now()');
+    // Retire expired credentials in small batches while retaining the account and session audit history.
+    await db.query(`WITH expired AS (
+      SELECT id FROM sessions WHERE expires_at<=now() AND token_hash IS NOT NULL
+      ORDER BY expires_at LIMIT 100 FOR UPDATE SKIP LOCKED
+    ) UPDATE sessions s SET token_hash=NULL FROM expired WHERE s.id=expired.id`);
     await db.query(`INSERT INTO oauth_login_attempts(state_hash,browser_hash,nonce,code_verifier,expires_at,return_page)
       VALUES($1,$2,$3,$4,now()+interval '10 minutes',$5)`,[digest(state),digest(browser),nonce,verifier,returnPage(page)]);
    });

@@ -42,8 +42,7 @@ Cloud Run health JSON includes K_REVISION when the runtime supplies it.
   the shared social HTTP handler applies these checks to its mutation routes.
 - Auth responses are not cached. Errors do not reveal provider tokens or database
   details. Browser errors link to a clean sign-in attempt and OAuth pages suppress referrers.
-  Per-instance login caps are only a baseline: configure production edge
-  rate limiting and expired-session maintenance before launch.
+  Starting a sign-in retires the hashes of up to 100 expired session credentials. Account references, creation, expiry and actual logout timestamps remain available for audit. Expiry is enforced on every authenticated request. Production edge rate limiting remains a separate launch requirement.
 
 ## Verification and remaining gates
 `npm test` verifies configuration and genuinely signed local JWTs using Google's
