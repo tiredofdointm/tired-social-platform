@@ -1,7 +1,9 @@
 # Session checkpoint
-Date: 2026-11-16
+See the [production launch verification](#production-launch-verification) for the latest checks.
 
-## Current outcome
+Initial checkpoint date: 2026-11-16
+
+## Initial project outcome
 Independent source creation, React/TypeScript UI, database foundation and progress workflow are committed.
 U03 is complete. The user prioritized Cloudflare connection for tired.events.
 Domain audit and cutover configuration are prepared in docs/CLOUDFLARE.md.
@@ -484,3 +486,29 @@ Next: deploy the merged changes to the europe-west1 payment sandbox with the exi
 The ticket-test sandbox serves 00046-zab. The deployed booking payout check reports $100 pending and no recorded payout. Production smoke checks passed on 00044-pov. The scheduled payout watch handles the remaining Stripe verification while independent UI work continues.
 
 Customize now offers a System theme that follows the device color scheme and responds to changes while the page is open. Existing Dark and Light settings are preserved. Next: verify the browser appearance and persistence checks in CI and confirm the automatic staging deployment.
+
+## November 18 sandbox payout check
+
+At 23:35 UTC, Stripe showed one matching unrefunded $107.50 sandbox booking charge and its unreversed $100 provider transfer. The provider had $100 pending, $0 available and no payouts. The balance entry for that specific transfer showed $100 net and a funds availability timestamp of November 25, 2026 at 00:00 UTC (November 24 at 4 p.m. Pacific). Stripe had not issued a payout or supplied an arrival date.
+
+After that time, open **Find talent → Sandbox payouts** on the payment staging site, select the original paid booking and refresh its payout check. The command-line diagnostic also accepts the original transfer ID as an argument, which it needs once the transfer falls outside its seven-day search window. Keep M02 in verification until the booking contributes $100 to a paid automatic payout and the funding entries match that payout’s total.
+
+## Production launch verification
+
+On November 18, 2026 Pacific time, the public smoke suite passed all six checks on `tired-social-platform-00057-ciz`. Cloud Run assigned it 100% of production traffic. Google Cloud Build `fc09c79e-f52d-4a3d-8ba5-0d7681997ccb` succeeded for commit `dc955a1a84218dc752885ea09c510f419883a858`. Private staging served that commit on `tired-social-staging-00041-kr8`. Its `/api/health` required authentication (403 signed out, 200 with a Google identity token), and returned the exact revision. The service scales from the default minimum of zero to a service maximum of two.
+
+The apex Cloud Run mapping reported Ready, DomainRoutable and CertificateProvisioned. Its four IPv4 records matched public DNS. HTTPS on the apex returned the production revision, and www redirected to the canonical HTTPS hostname with the path and query intact. Google Workspace MX and the CloudFront auth alias still resolved. No DNS records changed during this check. A direct TLS check of the former origin at `136.110.237.35` reset. Restoring that DNS address is not a verified recovery path.
+
+Cloud Monitoring uptime check `tired-events-production-health-62sKXej3fxM` tests HTTPS, certificate validity, HTTP 200 and a JSON status of `ok` every five minutes. Alert policy `14027476946105770365` opens an incident when two or more check locations fail for five minutes. The project owner's selected email channel is attached. Actual email receipt requires a delivery test.
+
+The monitoring API returned passing measurements from Oregon, Belgium, Singapore and São Paulo. A private Cloud Run rehearsal served the previous production image, validated the current image at zero traffic, promoted it, then restored the previous image to 100%. The health response matched the intended revision at each step. The rehearsal service was deleted after verification.
+
+PR #25 made the shared community the homepage on hosts with real accounts. Google Cloud Build `d43f6a30-13c0-456e-8e08-89c2cf6d515f` deployed merge `a1db774b3fe6661451d2cc69e92b75237674c3cd` to private staging. Production candidate `00059-yew` served the account homepage before promotion. Production then passed all six smoke checks and Chromium opened the shared community at 390px and 1440px with no horizontal overflow. Rollback for that release was `00057-ciz`.
+
+The automatic backup from November 18 at 05:16 UTC restored with five migrations. On-demand backup 1795047321664 captured the database at November 19 00:15 UTC (November 18 Pacific time). Restore operation 2979ef82-7f90-4fbe-b133-97f600000024 finished in 12 minutes 39 seconds. Both ledgers and all 14 migration checksums matched the release source. The restored application role read existing users and profiles and passed transactional writes, audience restrictions, blocking and moderation checks. All fixture writes rolled back. This backup met the pre-release recovery target. The temporary database and rollout rehearsal service were removed.
+
+The personalized feed and opt-in attendance changes passed PostgreSQL and browser tests in PRs #26 and #27. On the recovered copy, migration 015 preserved private attendance for existing profiles and a second run applied zero changes. Production migration job tired-social-migrate-wg8dv completed. Cloud Build ab4ffe1e-18ec-4aba-b952-a608e2184485 staged merge bdf84eb21aa2815753b961fd4e382c58c0b596d2 on 00044-tcr. The sandbox passed on 00061-nan. Production revision tired-social-platform-00062-hes passed all six smoke checks at 100% traffic. The public bundle contained the new feed and attendance controls. Production rollback is 00059-yew.
+
+Tired Studios is the selected live merchant. The customer-paid fee for live talent bookings is 7.5% of the provider service amount, rounded to the nearest cent before checkout. A $100 service has a $7.50 platform fee and a $107.50 buyer total. The Google Cloud secret for the server credential has been provisioned. Live collections require mode-isolated records, the merchant credential, a signed live webhook and verification. Production checkout remains disabled at this checkpoint.
+
+The recovered database contained at least two distinct Google accounts with sessions and at least one revoked session. Production hostname logs for November 16 through this check contained one successful Google callback and no logout. The sandbox and production share the database, so the aggregate alone cannot verify the two-account production journey.

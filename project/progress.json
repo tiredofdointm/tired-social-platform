@@ -5,7 +5,7 @@
   "currentSession": {
     "primaryTask": "M02",
     "nextTask": "M02",
-    "reason": "Verify the funded sandbox booking against its connected account’s paid automatic payout. The last observed $100 was pending."
+    "reason": "Stripe showed the booking’s $100 provider transfer pending on November 18, with $0 available and no payouts. Stripe lists the funds as available starting November 25 at 00:00 UTC. After that time, check the same booking for inclusion in a paid automatic payout."
   },
   "workInProgressLimit": 1,
   "tasks": [
@@ -183,7 +183,7 @@
     {
       "id": "C02",
       "title": "Authenticated Cloud Run staging",
-      "status": "blocked",
+      "status": "done",
       "priority": 0,
       "dependsOn": [
         "C01"
@@ -195,18 +195,11 @@
         "https://agent.tinyfish.ai/runs/91c3e8f4-f1fe-4b28-b965-bb62930c22ce",
         "https://agent.tinyfish.ai/runs/92113744-aa8f-4840-833c-ec0f374a9689",
         "https://agent.tinyfish.ai/runs/1dd1c110-9013-4f4b-905f-2cbeacce8146",
-        "https://agent.tinyfish.ai/runs/305f7104-4b46-478f-b424-43100aeaebe8"
+        "https://agent.tinyfish.ai/runs/305f7104-4b46-478f-b424-43100aeaebe8",
+        "https://console.cloud.google.com/cloud-build/builds/fc09c79e-f52d-4a3d-8ba5-0d7681997ccb?project=tired-social-platform",
+        "docs/SESSION.md#production-launch-verification"
       ],
-      "workstream": "C",
-      "blocker": {
-        "cause": "Direct health returned Google404; browser configuration reports conflict. Focused Console test could not execute authenticated GET /healthz.",
-        "retryCondition": "Obtain actual authenticated health response and authoritative deployed settings, then resolve routing/auth discrepancy.",
-        "nextAction": "Use an authenticated cloud execution channel to retrieve actual service JSON/IAM and GET /healthz. Do not repeat the Console Test dialog or claim its unsupported missing-route diagnosis.",
-        "attempts": [
-          "Console healthy summary does not resolve direct404; YAML and Security reports conflict.",
-          "Console Test generated POST root only. Source already registers /healthz; no authenticated GET was executed and no change saved."
-        ]
-      }
+      "workstream": "C"
     },
     {
       "id": "A01",
@@ -351,7 +344,12 @@
         "U02"
       ],
       "acceptance": "Recovery, monitoring, security, accessibility and rollback verified before domain launch.",
-      "evidence": [],
+      "evidence": [
+        "docs/SESSION.md#production-launch-verification",
+        "https://github.com/tiredofdointm/tired-social-platform/pull/25",
+        "https://github.com/tiredofdointm/tired-social-platform/pull/26",
+        "https://github.com/tiredofdointm/tired-social-platform/pull/27"
+      ],
       "workstream": "R"
     },
     {
@@ -364,15 +362,16 @@
       ],
       "acceptance": "Verified intended Google origin, hostname certificates and access model; apex/www route to the new app; HTTPS and rollback verified; existing mail/auth/API services preserved.",
       "evidence": [
-        "https://agent.tinyfish.ai/runs/94f41e4b-e585-4913-a0b7-afefd58431e4"
+        "https://agent.tinyfish.ai/runs/94f41e4b-e585-4913-a0b7-afefd58431e4",
+        "docs/SESSION.md#production-launch-verification"
       ],
       "workstream": "C",
       "blocker": {
-        "cause": "Cloudflare domain audited and staging service exists, but deployed authentication and health response are not verified; reported endpoint returned 404. DNS still points to existing origin.",
-        "retryCondition": "Complete C02: verify deployed source/revision, authentication and successful health request; select custom-domain frontend and validate origin TLS/access model.",
-        "nextAction": "Follow docs/CLOUDFLARE.md after staging is verified; reconcile existing api.tired.events Worker connection before any route change.",
+        "cause": "The apex serves the intended production revision and www redirects correctly. The former DNS rollback IP reset a TLS connection using the production hostname.",
+        "retryCondition": "A working fallback for the required rollback scope is identified and exercised.",
+        "nextAction": "Use the Cloud Run application rollback for a bad release. Validate a separately supported domain fallback before treating restoration of old DNS as viable.",
         "attempts": [
-          "Audited zone/DNS/TLS/rules; no DNS or settings writes made."
+          "Verified Google domain mapping, certificate, live apex A records, canonical path and query redirects, and the current production revision. The historical IP failed its direct TLS check."
         ]
       }
     },
@@ -389,13 +388,26 @@
       "evidence": [],
       "workstream": "A",
       "blocker": {
-        "cause": "One production Google sign-in returned to Community and displayed the account name. The second account and logout revocation checks remain open.",
-        "retryCondition": "A second real Google account is available for the end-to-end verification.",
+        "cause": "The second Google account is available, but TinyFish declined to start the production browser check because the wallet has insufficient credit.",
+        "retryCondition": "The account holder completes the second production login and logout checks, or a usable browser session becomes available.",
         "nextAction": "Check that two independent Google accounts sign in over HTTPS, validate shared data isolation, and confirm logout revokes access.",
         "attempts": [
-          "Cloud Run migration execution tired-social-migrate-52lww confirmed schema version 4. Live user confirmed Google callback and profile display."
+          "Cloud Run migration execution tired-social-migrate-52lww confirmed schema version 4. Live user confirmed Google callback and profile display.",
+          "The user confirmed a second Google account was signed into TinyFish. The requested run did not start."
         ]
       }
+    },
+    {
+      "id": "M03",
+      "title": "Enable live talent booking checkout with Tired Studios",
+      "status": "backlog",
+      "priority": 1,
+      "dependsOn": [
+        "M02"
+      ],
+      "acceptance": "Only live quotes can start live checkout. The buyer sees the 7.5% fee and full USD total. Provider onboarding, signed webhooks, refunds and transfer reconciliation use the selected merchant and matching mode.",
+      "evidence": [],
+      "workstream": "M"
     }
   ]
 }
